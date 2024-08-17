@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:truotlo/src/home/home_page.dart';
+import 'package:truotlo/src/page/home/elements/home_page.dart';
+import 'package:truotlo/src/page/chart/chart_page.dart'; // Add this import
 
 class SelectPage extends StatefulWidget {
   const SelectPage({super.key});
@@ -18,7 +19,13 @@ class _SelectPageState extends State<SelectPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> pages = [const HomePage()];
+    List<Widget> pages = [
+      const HomePage(),
+      const Placeholder(), // Map page placeholder
+      const Placeholder(), // Forecast page placeholder
+      const ChartPage(), // Add ChartPage here
+      const Placeholder(), // Settings page placeholder
+    ];
     return Scaffold(
         body: AnimatedSwitcher(
           duration: const Duration(milliseconds: 500),

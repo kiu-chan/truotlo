@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'weather_service.dart';
-import 'location_data.dart';
+import '../weather_service.dart';
+import '../../../data/location_data.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
