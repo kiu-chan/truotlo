@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truotlo/src/home/home_page.dart';
 
 class SelectPage extends StatefulWidget {
   const SelectPage({super.key});
@@ -11,14 +12,20 @@ class _SelectPageState extends State<SelectPage> {
   int currentindex = 0;
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    List<Widget> pages = [];
+    List<Widget> pages = [const HomePage()];
     return Scaffold(
         body: AnimatedSwitcher(
           duration: const Duration(milliseconds: 500),
           child: Container(
             color: Colors.white,
             key: ValueKey<int>(currentindex),
+            child: pages[currentindex],
           ),
         ),
         bottomNavigationBar: BottomNavigationBar(
@@ -39,7 +46,7 @@ class _SelectPageState extends State<SelectPage> {
                 icon: Icon((Icons.cloud_queue)),
                 label: "Forecast",
               ),
-              const BottomNavigationBarItem(
+              BottomNavigationBarItem(
                 icon: Icon(Icons.ssid_chart),
                 label: "Chart",
               ),

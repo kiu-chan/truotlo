@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:truotlo/src/selectPage.dart';
+import 'package:truotlo/src/select_page.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
