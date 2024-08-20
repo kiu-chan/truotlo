@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:truotlo/src/data/chart_data.dart';
 import 'package:truotlo/src/data/landslide_data.dart';
+import 'package:intl/intl.dart';
+import 'package:truotlo/src/page/chart/chart_menu.dart';
+import 'chart_data_processor.dart';
+import 'chart_utils.dart';
 
 class ChartPage extends StatefulWidget {
-  const ChartPage({super.key});
+  const ChartPage({Key? key}) : super(key: key);
 
   @override
   ChartPageState createState() => ChartPageState();
@@ -11,10 +16,17 @@ class ChartPage extends StatefulWidget {
 
 class ChartPageState extends State<ChartPage> {
   final LandslideDataService _dataService = LandslideDataService();
-  List<LandslideDataModel> _data = [];
+  final ChartDataProcessor _dataProcessor = ChartDataProcessor();
+  List<LandslideDataModel> _allData = [];
+  List<LandslideDataModel> _filteredData = [];
+  List<ChartData> _chartDataList = [];
   bool _isLoading = true;
   String _error = '';
-  int selected = 0;
+  String _selectedChart = '';
+  bool _showLegend = true;
+  DateTime? _startDateTime;
+  DateTime? _endDateTime;
+  Map<int, bool> _lineVisibility = {};
 
   @override
   void initState() {
@@ -31,7 +43,12 @@ class ChartPageState extends State<ChartPage> {
     try {
       final data = await _dataService.fetchLandslideData();
       setState(() {
-        _data = data;
+        _allData = data;
+        _filteredData = List.from(_allData);
+        _processData();
+        ChartUtils.initLineVisibility(_lineVisibility, _filteredData.length);
+        _selectedChart =
+            _chartDataList.isNotEmpty ? _chartDataList[0].name : '';
         _isLoading = false;
       });
     } catch (e) {
@@ -42,187 +59,143 @@ class ChartPageState extends State<ChartPage> {
     }
   }
 
-  List<LineChartBarData> _getLineBarsData() {
-    List<LineChartBarData> lineBars = _data.map((d) {
-      return LineChartBarData(
-        spots: [
-          FlSpot(d.calculatedTiltAOr1, -6),
-          FlSpot(d.calculatedTiltAOr2, -11),
-          FlSpot(d.calculatedTiltAOr3, -16),
-        ],
-        isCurved: true,
-        curveSmoothness: 0.35,
-        color: Colors.primaries[_data.indexOf(d) % Colors.primaries.length],
-        dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(show: false),
-      );
-    }).toList();
+  void _processData() {
+    _chartDataList = _dataProcessor.processData(_filteredData);
+  }
 
-    // Thêm đường mặc định với các giá trị chính xác
-    lineBars.add(
-      LineChartBarData(
-        spots: [
-          const FlSpot(-0.001565, -6),
-          const FlSpot(0.009616, -11),
-          const FlSpot(0.000935, -16),
-        ],
-        isCurved: true,
-        curveSmoothness: 0.35,
-        color: Colors.black,
-        dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(show: false),
-        dashArray: [5, 5], // Tạo đường đứt khúc
-      ),
+  Future<void> _selectDateTimeRange() async {
+    final DateTimeRange? dateRange = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: _startDateTime != null && _endDateTime != null
+          ? DateTimeRange(start: _startDateTime!, end: _endDateTime!)
+          : null,
     );
 
-    return lineBars;
+    if (dateRange != null) {
+      final TimeOfDay? startTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_startDateTime ?? DateTime.now()),
+      );
+
+      if (startTime != null) {
+        final TimeOfDay? endTime = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.fromDateTime(_endDateTime ?? DateTime.now()),
+        );
+
+        if (endTime != null) {
+          setState(() {
+            _startDateTime =
+                ChartUtils.combineDateAndTime(dateRange.start, startTime);
+            _endDateTime =
+                ChartUtils.combineDateAndTime(dateRange.end, endTime);
+            _filterDataByDateRange();
+          });
+        }
+      }
+    }
+  }
+
+  void _filterDataByDateRange() {
+    _filteredData = ChartUtils.filterDataByDateRange(
+        _allData, _startDateTime, _endDateTime);
+    _processData();
+    ChartUtils.initLineVisibility(_lineVisibility, _filteredData.length);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Đo nghiêng, hướng Tây - Đông'),
+        title: const Text('Biểu đồ'),
       ),
-      endDrawer: Drawer(
-        child: ListView(padding: EdgeInsets.zero, children: <Widget>[
-          SizedBox(
-            height: 120,
-            child: DrawerHeader(
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  const Text(
-                    'Tùy chỉnh',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          ExpansionTile(
-            leading: const Icon(Icons.api),
-            title: const Text('Biểu đồ'),
-            subtitle: const Text('Biểu đồ mặc định'),
-            children: <Widget>[
-              RadioListTile<int>(
-                title: const Text('Đo nghiêng, hướng Tây - Đông'),
-                value: 0,
-                groupValue: selected,
-                onChanged: (value) {
-                  setState(() {
-                    selected = value!;
-                    // widget.onClick(value);
-                  });
-                },
-              ),
-            ],
-          ),
-        ]),
+      endDrawer: ChartMenu(
+        chartNames: _chartDataList.map((c) => c.name).toList(),
+        selectedChart: _selectedChart,
+        showLegend: _showLegend,
+        onChartTypeChanged: (value) {
+          setState(() {
+            _selectedChart = value;
+          });
+        },
+        onShowLegendChanged: (value) {
+          setState(() {
+            _showLegend = value;
+          });
+        },
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error.isNotEmpty
-              ? Center(child: Text(_error))
-              : RefreshIndicator(
-                  onRefresh: _fetchData,
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Đo nghiêng, hướng Tây - Đông',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          AspectRatio(
-                            aspectRatio: 1.5,
-                            child: LineChart(
-                              LineChartData(
-                                lineBarsData: _getLineBarsData(),
-                                titlesData: FlTitlesData(
-                                  bottomTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      reservedSize: 30,
-                                      getTitlesWidget: (value, meta) {
-                                        return Text(value.toStringAsFixed(4));
-                                      },
-                                    ),
-                                  ),
-                                  leftTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      reservedSize: 30,
-                                      getTitlesWidget: (value, meta) {
-                                        return Text(value.toStringAsFixed(0));
-                                      },
-                                    ),
-                                  ),
-                                  topTitles: const AxisTitles(
-                                      sideTitles:
-                                          SideTitles(showTitles: false)),
-                                  rightTitles: const AxisTitles(
-                                      sideTitles:
-                                          SideTitles(showTitles: false)),
-                                ),
-                                gridData: const FlGridData(show: true),
-                                borderData: FlBorderData(show: true),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Chú thích:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 10),
-                          ..._data.asMap().entries.map((entry) {
-                            int index = entry.key;
-                            Color color = Colors
-                                .primaries[index % Colors.primaries.length];
-                            return _buildLegendItem(color, 'Mẫu ${index + 1}');
-                          }).toList(),
-                          _buildLegendItem(Colors.black, 'Giá trị mặc định'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+      body: _buildBody(),
     );
   }
 
-  Widget _buildLegendItem(Color color, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            color: color,
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error.isNotEmpty) {
+      return Center(child: Text(_error));
+    }
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _selectedChart,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _selectDateTimeRange,
+                  child: Text(ChartUtils.getDateRangeText(
+                      _startDateTime, _endDateTime)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              AspectRatio(
+                aspectRatio: 1.5,
+                child: LineChart(
+                  ChartUtils.getLineChartData(
+                    _selectedChart,
+                    _chartDataList,
+                    _lineVisibility,
+                    _filteredData,
+                  ),
+                ),
+              ),
+              if (_showLegend) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  'Chú thích:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                ...ChartUtils.buildLegendItems(
+                  _selectedChart,
+                  _lineVisibility,
+                  _chartDataList,
+                  _toggleLineVisibility,
+                ),
+              ],
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(label),
-        ],
+        ),
       ),
     );
+  }
+
+  void _toggleLineVisibility(int index) {
+    setState(() {
+      _lineVisibility[index] = !(_lineVisibility[index] ?? true);
+    });
   }
 }
