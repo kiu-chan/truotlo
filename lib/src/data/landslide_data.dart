@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:truotlo/src/config/chart.dart';
 
 class LandslideDataModel {
   final int id;
@@ -105,10 +106,10 @@ class LandslideDataModel {
 }
 
 class LandslideDataService {
-  static const String _baseUrl = 'http://171.244.133.49/api';
+  static final String _baseApi = ChartConfig().chartApi;
 
   Future<List<LandslideDataModel>> fetchLandslideData() async {
-    final response = await http.get(Uri.parse('$_baseUrl/getLandSlideRawData'));
+    final response = await http.get(Uri.parse(_baseApi));
 
     if (response.statusCode == 200) {
       final jsonData = json.decode(response.body);

@@ -69,7 +69,6 @@ class ChartMenu extends StatelessWidget {
             value: showLegend,
             onChanged: (bool value) {
               onShowLegendChanged(value);
-              Navigator.pop(context);
             },
           ),
         ],
