@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/map_data.dart';
 import 'package:truotlo/src/config/map.dart';
-import 'package:truotlo/src/database/border.dart';
 import 'package:truotlo/src/database/database.dart'; // Import the database file
 
 class MapboxPage extends StatefulWidget {
@@ -32,10 +31,23 @@ class MapboxPageState extends State<MapboxPage> {
     await _database.connect();
   }
 
+  void drawPolygonsOnMap(MapboxMapController controller, List<List<LatLng>> polygons) {
+    for (int i = 0; i < polygons.length; i++) {
+      controller.addLine(
+        LineOptions(
+          geometry: polygons[i],
+          lineColor: "#FF0000", // Red color
+          lineWidth: 2.0, // Adjust the line width as needed
+          lineOpacity: 1.0,
+        ),
+      );
+    }
+  }
+
   void _onStyleLoaded() async {
     if (_database.connection != null) {
       try {
-        List<List<LatLng>> polygons = await fetchAndParseGeometry(_database.connection!);
+        List<List<LatLng>> polygons = await _database.fetchAndParseGeometry();
         drawPolygonsOnMap(_mapController, polygons);
       } catch (e) {
         print('Error fetching or drawing polygons: $e');

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:truotlo/src/page/home/elements/home_page.dart';
+import 'package:truotlo/src/page/home/home_page.dart';
 import 'package:truotlo/src/page/chart/chart_page.dart';
 import 'package:truotlo/src/page/map/map_page.dart';
 
@@ -7,10 +7,10 @@ class SelectPage extends StatefulWidget {
   const SelectPage({super.key});
 
   @override
-  _SelectPageState createState() => _SelectPageState();
+  SelectPageState createState() => SelectPageState();
 }
 
-class _SelectPageState extends State<SelectPage> {
+class SelectPageState extends State<SelectPage> {
   int currentindex = 0;
 
   @override
@@ -22,7 +22,7 @@ class _SelectPageState extends State<SelectPage> {
   Widget build(BuildContext context) {
     List<Widget> pages = [
       const HomePage(),
-      const MapboxPage(), // Thay thế Placeholder bằng MapboxPage
+      const MapboxPage(),
       const Placeholder(), // Forecast page placeholder
       const ChartPage(),
       const Placeholder(), // Settings page placeholder

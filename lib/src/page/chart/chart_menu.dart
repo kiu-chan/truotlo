@@ -8,13 +8,13 @@ class ChartMenu extends StatelessWidget {
   final Function(bool) onShowLegendChanged;
 
   const ChartMenu({
-    Key? key,
+    super.key,
     required this.chartNames,
     required this.selectedChart,
     required this.showLegend,
     required this.onChartTypeChanged,
     required this.onShowLegendChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

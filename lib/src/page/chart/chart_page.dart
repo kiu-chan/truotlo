@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:truotlo/src/data/chart_data.dart';
 import 'package:truotlo/src/data/landslide_data.dart';
-import 'package:intl/intl.dart';
 import 'package:truotlo/src/page/chart/chart_menu.dart';
 import 'chart_data_processor.dart';
 import 'chart_utils.dart';
 
 class ChartPage extends StatefulWidget {
-  const ChartPage({Key? key}) : super(key: key);
+  const ChartPage({super.key});
 
   @override
   ChartPageState createState() => ChartPageState();
@@ -26,7 +25,7 @@ class ChartPageState extends State<ChartPage> {
   bool _showLegend = true;
   DateTime? _startDateTime;
   DateTime? _endDateTime;
-  Map<int, bool> _lineVisibility = {};
+  final Map<int, bool> _lineVisibility = {};
 
   @override
   void initState() {
