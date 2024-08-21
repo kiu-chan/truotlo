@@ -1,34 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:truotlo/src/data/map/map_data.dart';
+import 'package:truotlo/src/config/map.dart';
+import 'package:truotlo/src/database/border.dart';
+import 'package:truotlo/src/database/database.dart'; // Import the database file
 
 class MapboxPage extends StatefulWidget {
-  const MapboxPage({Key? key}) : super(key: key);
+  const MapboxPage({super.key});
 
   @override
-  _MapboxPageState createState() => _MapboxPageState();
+  MapboxPageState createState() => MapboxPageState();
 }
 
-class _MapboxPageState extends State<MapboxPage> {
+class MapboxPageState extends State<MapboxPage> {
   String currentStyle = MapboxStyles.MAPBOX_STREETS;
+  late MapboxMapController _mapController;
+  final List<MapStyleCategory> styleCategories = MapConfig().getStyleCategories();
+  final DefaultDatabase _database = DefaultDatabase();
 
-  final List<MapStyle> styles = [
-    MapStyle("Streets", MapboxStyles.MAPBOX_STREETS),
-    MapStyle("Outdoors", MapboxStyles.OUTDOORS),
-    MapStyle("Light", MapboxStyles.LIGHT),
-    MapStyle("Dark", MapboxStyles.DARK),
-    MapStyle("Satellite", MapboxStyles.SATELLITE),
-    MapStyle("Satellite Streets", MapboxStyles.SATELLITE_STREETS),
-  ];
+  LatLng defaultTarget = MapConfig().getDefaultTarget();
+  double defaultZoom = MapConfig().getDefaultZoom();
+  String mapToken = MapConfig().getMapToken();
 
-  void _onStyleLoaded() {
-    // Thêm các tùy chỉnh bản đồ ở đây nếu cần
+  @override
+  void initState() {
+    super.initState();
+    _connectToDatabase();
+  }
+
+  Future<void> _connectToDatabase() async {
+    await _database.connect();
+  }
+
+  void _onStyleLoaded() async {
+    if (_database.connection != null) {
+      try {
+        List<List<LatLng>> polygons = await fetchAndParseGeometry(_database.connection!);
+        drawPolygonsOnMap(_mapController, polygons);
+      } catch (e) {
+        print('Error fetching or drawing polygons: $e');
+      }
+    } else {
+      print('Database connection not available');
+    }
+  }
+
+  void _onMapCreated(MapboxMapController controller) {
+    _mapController = controller;
   }
 
   void _changeMapStyle(String style) {
     setState(() {
       currentStyle = style;
     });
-    Navigator.pop(context); // Đóng Drawer sau khi chọn style
+    Navigator.pop(context); // Close Drawer after selecting style
   }
 
   @override
@@ -53,30 +78,42 @@ class _MapboxPageState extends State<MapboxPage> {
                 ),
               ),
             ),
-            ...styles.map((style) => ListTile(
-                  title: Text(style.name),
-                  onTap: () => _changeMapStyle(style.url),
-                )),
+            ExpansionTile(
+              leading: const Icon(Icons.api),
+              title: const Text('Bản đồ'),
+              children: <Widget>[
+                ...styleCategories.map((category) => ExpansionTile(
+                      title: Text(category.name),
+                      children: category.styles
+                          .map((style) => RadioListTile<String>(
+                                title: Text(style.name),
+                                value: style.url,
+                                groupValue: currentStyle,
+                                onChanged: (value) => _changeMapStyle(value!),
+                              ))
+                          .toList(),
+                    )),
+              ],
+            ),
           ],
         ),
       ),
       body: MapboxMap(
-        accessToken:
-            'sk.eyJ1IjoibW9ubHljdXRlIiwiYSI6ImNtMDI4enByaDAwMnIycXIwdDhqc3diNHgifQ.cpA69qDo8WHZ7ZxeGzCSlw',
-        initialCameraPosition: const CameraPosition(
-          target: LatLng(14.0583, 108.2772), // Tọa độ trung tâm của Bình Định
-          zoom: 8.0,
+        accessToken: mapToken,
+        initialCameraPosition: CameraPosition(
+          target: defaultTarget,
+          zoom: defaultZoom,
         ),
         styleString: currentStyle,
         onStyleLoadedCallback: _onStyleLoaded,
+        onMapCreated: _onMapCreated,
       ),
     );
   }
-}
 
-class MapStyle {
-  final String name;
-  final String url;
-
-  MapStyle(this.name, this.url);
+  @override
+  void dispose() {
+    _database.connection?.close();
+    super.dispose();
+  }
 }
