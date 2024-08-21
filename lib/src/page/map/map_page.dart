@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/map_data.dart';
 import 'package:truotlo/src/config/map.dart';
-import 'package:truotlo/src/database/database.dart'; // Import the database file
+import 'package:truotlo/src/database/database.dart';
+import 'map_utils.dart';
+import 'location_service.dart';
 
 class MapboxPage extends StatefulWidget {
   const MapboxPage({super.key});
@@ -16,56 +18,93 @@ class MapboxPageState extends State<MapboxPage> {
   late MapboxMapController _mapController;
   final List<MapStyleCategory> styleCategories = MapConfig().getStyleCategories();
   final DefaultDatabase _database = DefaultDatabase();
+  late MapUtils _mapUtils;
+  final LocationService _locationService = LocationService();
 
   LatLng defaultTarget = MapConfig().getDefaultTarget();
   double defaultZoom = MapConfig().getDefaultZoom();
   String mapToken = MapConfig().getMapToken();
 
+  LatLng? _currentLocation;
+
   @override
   void initState() {
     super.initState();
     _connectToDatabase();
+    _initializeLocationService();
   }
 
   Future<void> _connectToDatabase() async {
     await _database.connect();
   }
 
-  void drawPolygonsOnMap(MapboxMapController controller, List<List<LatLng>> polygons) {
-    for (int i = 0; i < polygons.length; i++) {
-      controller.addLine(
-        LineOptions(
-          geometry: polygons[i],
-          lineColor: "#FF0000", // Red color
-          lineWidth: 2.0, // Adjust the line width as needed
-          lineOpacity: 1.0,
-        ),
+  void _initializeLocationService() async {
+    bool permissionGranted = await _locationService.checkAndRequestLocationPermission(context);
+    if (permissionGranted) {
+      _locationService.startLocationUpdates(
+        (location) {
+          setState(() {
+            _currentLocation = location;
+          });
+          _mapUtils.updateLocationOnMap(location);
+        },
+        _handleLocationError
       );
     }
+  }
+
+  void _handleLocationError(dynamic e) {
+    String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
+    print(errorMessage);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
   }
 
   void _onStyleLoaded() async {
     if (_database.connection != null) {
       try {
         List<List<LatLng>> polygons = await _database.fetchAndParseGeometry();
-        drawPolygonsOnMap(_mapController, polygons);
+        await _mapUtils.drawPolygonsOnMap(polygons);
       } catch (e) {
         print('Error fetching or drawing polygons: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không thể tải dữ liệu bản đồ. Vui lòng thử lại sau.')),
+        );
       }
     } else {
       print('Database connection not available');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra kết nối mạng.')),
+      );
+    }
+    if (_currentLocation != null) {
+      _mapUtils.updateLocationOnMap(_currentLocation!);
     }
   }
 
   void _onMapCreated(MapboxMapController controller) {
     _mapController = controller;
+    _mapUtils = MapUtils(_mapController);
   }
 
   void _changeMapStyle(String style) {
     setState(() {
       currentStyle = style;
     });
-    Navigator.pop(context); // Close Drawer after selecting style
+    Navigator.pop(context);
+  }
+
+  void _moveToCurrentLocation() {
+    if (_currentLocation != null) {
+      _mapController.animateCamera(
+        CameraUpdate.newLatLng(_currentLocation!),
+      );
+    }
+  }
+
+  void _moveToDefaultLocation() {
+    _mapController.animateCamera(
+      CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom),
+    );
   }
 
   @override
@@ -110,21 +149,70 @@ class MapboxPageState extends State<MapboxPage> {
           ],
         ),
       ),
-      body: MapboxMap(
-        accessToken: mapToken,
-        initialCameraPosition: CameraPosition(
-          target: defaultTarget,
-          zoom: defaultZoom,
-        ),
-        styleString: currentStyle,
-        onStyleLoadedCallback: _onStyleLoaded,
-        onMapCreated: _onMapCreated,
+      body: Stack(
+        children: [
+          MapboxMap(
+            accessToken: mapToken,
+            initialCameraPosition: CameraPosition(
+              target: defaultTarget,
+              zoom: defaultZoom,
+            ),
+            styleString: currentStyle,
+            onStyleLoadedCallback: _onStyleLoaded,
+            onMapCreated: _onMapCreated,
+          ),
+          if (_currentLocation != null)
+            Positioned(
+              bottom: 16,
+              left: 16,
+              child: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_pin, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text(
+                      'Tọa độ: ${_currentLocation!.latitude.toStringAsFixed(6)}, ${_currentLocation!.longitude.toStringAsFixed(6)}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: _moveToCurrentLocation,
+            child: Icon(Icons.my_location),
+            heroTag: 'moveToCurrentLocation',
+          ),
+          SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: _moveToDefaultLocation,
+            child: Icon(Icons.home),
+            heroTag: 'moveToDefaultLocation',
+          ),
+        ],
       ),
     );
   }
 
   @override
   void dispose() {
+    _locationService.stopLocationUpdates();
     _database.connection?.close();
     super.dispose();
   }
