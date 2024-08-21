@@ -26,6 +26,7 @@ class MapboxPageState extends State<MapboxPage> {
   String mapToken = MapConfig().getMapToken();
 
   LatLng? _currentLocation;
+  bool _isBorderVisible = true;
 
   @override
   void initState() {
@@ -63,7 +64,11 @@ class MapboxPageState extends State<MapboxPage> {
     if (_database.connection != null) {
       try {
         List<List<LatLng>> polygons = await _database.fetchAndParseGeometry();
-        await _mapUtils.drawPolygonsOnMap(polygons);
+        if (_isBorderVisible) {
+          await _mapUtils.drawPolygonsOnMap(polygons);
+        } else {
+          await _mapUtils.clearPolygonsOnMap();
+        }
       } catch (e) {
         print('Error fetching or drawing polygons: $e');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -107,6 +112,20 @@ class MapboxPageState extends State<MapboxPage> {
     );
   }
 
+  void _toggleBorderVisibility(bool? value) async {
+    if (value != null) {
+      setState(() {
+        _isBorderVisible = value;
+      });
+      if (_isBorderVisible) {
+        List<List<LatLng>> polygons = await _database.fetchAndParseGeometry();
+        await _mapUtils.drawPolygonsOnMap(polygons);
+      } else {
+        await _mapUtils.clearPolygonsOnMap();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,7 +141,7 @@ class MapboxPageState extends State<MapboxPage> {
                 color: Colors.blue,
               ),
               child: Text(
-                'Chọn loại bản đồ',
+                'Tùy chọn bản đồ',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -130,7 +149,7 @@ class MapboxPageState extends State<MapboxPage> {
               ),
             ),
             ExpansionTile(
-              leading: const Icon(Icons.api),
+              leading: const Icon(Icons.map),
               title: const Text('Bản đồ'),
               children: <Widget>[
                 ...styleCategories.map((category) => ExpansionTile(
@@ -144,6 +163,17 @@ class MapboxPageState extends State<MapboxPage> {
                               ))
                           .toList(),
                     )),
+              ],
+            ),
+            ExpansionTile(
+              leading: const Icon(Icons.location_on),
+              title: const Text('Khu vực'),
+              children: <Widget>[
+                CheckboxListTile(
+                  title: const Text('Hiển thị ranh giới'),
+                  value: _isBorderVisible,
+                  onChanged: _toggleBorderVisibility,
+                ),
               ],
             ),
           ],

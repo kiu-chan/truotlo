@@ -29,10 +29,7 @@ class MapUtils {
 
   Future<void> drawPolygonsOnMap(List<List<LatLng>> polygons) async {
     // Remove previously drawn polygons
-    for (var line in _drawnPolygons) {
-      await _mapController.removeLine(line);
-    }
-    _drawnPolygons.clear();
+    await clearPolygonsOnMap();
 
     for (int i = 0; i < polygons.length; i++) {
       Line line = await _mapController.addLine(
@@ -45,5 +42,12 @@ class MapUtils {
       );
       _drawnPolygons.add(line);
     }
+  }
+
+  Future<void> clearPolygonsOnMap() async {
+    for (var line in _drawnPolygons) {
+      await _mapController.removeLine(line);
+    }
+    _drawnPolygons.clear();
   }
 }
