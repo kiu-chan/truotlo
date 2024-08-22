@@ -51,6 +51,16 @@ class MapboxPageState extends State<MapboxPage> {
 
   Future<void> _connectToDatabase() async {
     await _database.connect();
+
+    if(_isDistrictsVisible) {
+      await _fetchDistricts();
+    }
+    if(_isBorderVisible) {
+      await _fetchBorderPolygons();
+    }
+    if(_isCommunesVisible) {
+      await _fetchCommunes();
+    }
   }
 
   Future<void> _fetchDistricts() async {
