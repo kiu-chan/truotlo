@@ -4,8 +4,9 @@ import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/map_data.dart';
 import 'package:truotlo/src/config/map.dart';
 import 'package:truotlo/src/database/database.dart';
-import 'map_utils.dart';
-import 'location_service.dart';
+import 'elements/map_utils.dart';
+import 'elements/location_service.dart';
+import 'menu.dart';
 
 class MapboxPage extends StatefulWidget {
   const MapboxPage({Key? key}) : super(key: key);
@@ -141,62 +142,17 @@ class MapboxPageState extends State<MapboxPage> {
       appBar: AppBar(
         title: const Text('Bản đồ'),
       ),
-      endDrawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text('Tùy chọn bản đồ', style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ExpansionTile(
-              leading: const Icon(Icons.map),
-              title: const Text('Bản đồ'),
-              children: <Widget>[
-                ...styleCategories.map((category) => ExpansionTile(
-                  title: Text(category.name),
-                  children: category.styles.map((style) => RadioListTile<String>(
-                    title: Text(style.name),
-                    value: style.url,
-                    groupValue: currentStyle,
-                    onChanged: (value) => _changeMapStyle(value!),
-                  )).toList(),
-                )),
-              ],
-            ),
-            ExpansionTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Khu vực'),
-              children: <Widget>[
-                CheckboxListTile(
-                  title: const Text('Huyện'),
-                  value: _isDistrictsVisible,
-                  onChanged: _toggleDistrictsVisibility,
-                ),
-                CheckboxListTile(
-                  title: const Text('Ranh giới'),
-                  value: _isBorderVisible,
-                  onChanged: _toggleBorderVisibility,
-                ),
-              ],
-            ),
-            if (_isDistrictsVisible)
-              ExpansionTile(
-                leading: const Icon(Icons.map_outlined),
-                title: const Text('Huyện'),
-                children: _districts.map((district) => CheckboxListTile(
-                  title: Text(district.name),
-                  value: _districtVisibility[district.id],
-                  onChanged: (bool? value) => _toggleDistrictVisibility(district.id, value),
-                  secondary: Container(
-                    width: 24,
-                    height: 24,
-                    color: district.color,
-                  ),
-                )).toList(),
-              ),
-          ],
-        ),
+      endDrawer: MapMenu(
+        styleCategories: styleCategories,
+        currentStyle: currentStyle,
+        isDistrictsVisible: _isDistrictsVisible,
+        isBorderVisible: _isBorderVisible,
+        districts: _districts,
+        districtVisibility: _districtVisibility,
+        onStyleChanged: _changeMapStyle,
+        onDistrictsVisibilityChanged: _toggleDistrictsVisibility,
+        onBorderVisibilityChanged: _toggleBorderVisibility,
+        onDistrictVisibilityChanged: _toggleDistrictVisibility,
       ),
       body: Stack(
         children: [
@@ -254,11 +210,13 @@ class MapboxPageState extends State<MapboxPage> {
     _onStyleLoaded();
   }
 
-  void _changeMapStyle(String style) {
-    setState(() {
-      currentStyle = style;
-    });
-    Navigator.pop(context);
+  void _changeMapStyle(String? style) {
+    if (style != null) {
+      setState(() {
+        currentStyle = style;
+      });
+      Navigator.pop(context);
+    }
   }
 
   void _moveToCurrentLocation() {
