@@ -47,7 +47,8 @@ class MapUtils {
         Fill fill = await _mapController.addFill(
           FillOptions(
             geometry: [polygon],
-            fillColor: '#${district.color.value.toRadixString(16).substring(2)}',
+            fillColor:
+                '#${district.color.value.toRadixString(16).substring(2)}',
             fillOpacity: 0.5,
             fillOutlineColor: '#000000',
           ),
@@ -65,7 +66,8 @@ class MapUtils {
     if (_drawnDistricts.containsKey(districtId)) {
       for (var fill in _drawnDistricts[districtId]!) {
         try {
-          await _mapController.updateFill(fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
+          await _mapController.updateFill(
+              fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của huyện $districtId: $e');
           // Xử lý lỗi một cách phù hợp
@@ -78,7 +80,8 @@ class MapUtils {
     for (var fills in _drawnDistricts.values) {
       for (var fill in fills) {
         try {
-          await _mapController.updateFill(fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
+          await _mapController.updateFill(
+              fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của tất cả các huyện: $e');
           // Xử lý lỗi một cách phù hợp
@@ -135,13 +138,18 @@ class MapUtils {
   }
 
   Future<void> toggleBorderVisibility(bool isVisible) async {
-    for (var line in _drawnPolygons) {
-      try {
-        await _mapController.updateLine(line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
-      } catch (e) {
-        print('Lỗi khi chuyển đổi tính hiển thị của đường biên: $e');
-        // Xử lý lỗi một cách phù hợp
+    try {
+      for (var line in _drawnPolygons) {
+        try {
+          await _mapController.updateLine(
+              line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
+        } catch (e) {
+          print('Lỗi khi chuyển đổi tính hiển thị của đường biên: $e');
+          // Xử lý lỗi một cách phù hợp
+        }
       }
+    } catch (e) {
+      print('lỗi: $e');
     }
   }
 }
