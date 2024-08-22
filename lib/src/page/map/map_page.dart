@@ -4,6 +4,7 @@ import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/map_data.dart';
 import 'package:truotlo/src/config/map.dart';
 import 'package:truotlo/src/database/database.dart';
+import 'package:truotlo/src/database/commune.dart';
 import 'elements/map_utils.dart';
 import 'elements/location_service.dart';
 import 'menu.dart';
@@ -18,7 +19,8 @@ class MapboxPage extends StatefulWidget {
 class MapboxPageState extends State<MapboxPage> {
   String currentStyle = MapboxStyles.MAPBOX_STREETS;
   late MapboxMapController _mapController;
-  final List<MapStyleCategory> styleCategories = MapConfig().getStyleCategories();
+  final List<MapStyleCategory> styleCategories =
+      MapConfig().getStyleCategories();
   final DefaultDatabase _database = DefaultDatabase();
   late MapUtils _mapUtils;
   final LocationService _locationService = LocationService();
@@ -29,10 +31,16 @@ class MapboxPageState extends State<MapboxPage> {
 
   LatLng? _currentLocation;
   bool _isDistrictsVisible = true;
-  bool _isBorderVisible = true;
+  bool _isBorderVisible = false;
+  bool _isCommunesVisible = false;
   List<District> _districts = [];
   List<List<LatLng>> _borderPolygons = [];
+  List<Commune> _communes = [];
   Map<int, bool> _districtVisibility = {};
+
+  bool _isDistrictsLoaded = false;
+  bool _isBorderLoaded = false;
+  bool _isCommunesLoaded = false;
 
   @override
   void initState() {
@@ -43,65 +51,74 @@ class MapboxPageState extends State<MapboxPage> {
 
   Future<void> _connectToDatabase() async {
     await _database.connect();
-    await _fetchDistricts();
-    await _fetchBorderPolygons();
-    _onStyleLoaded();
   }
 
   Future<void> _fetchDistricts() async {
-    if (_database.connection != null) {
+    if (_database.connection != null && !_isDistrictsLoaded) {
       try {
         _districts = await _database.fetchDistrictsData();
         _districtVisibility = {
           for (var district in _districts) district.id: true
         };
+        _isDistrictsLoaded = true;
         setState(() {});
+        await _mapUtils.drawDistrictsOnMap(_districts);
       } catch (e) {
         print('Lỗi khi lấy dữ liệu huyện: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể tải dữ liệu huyện. Vui lòng thử lại sau.')),
-        );
+        _showErrorSnackBar(
+            'Không thể tải dữ liệu huyện. Vui lòng thử lại sau.');
       }
     }
   }
 
   Future<void> _fetchBorderPolygons() async {
-    if (_database.connection != null) {
+    if (_database.connection != null && !_isBorderLoaded) {
       try {
-        _borderPolygons = await _database.borderDatabase.fetchAndParseGeometry();
+        _borderPolygons =
+            await _database.borderDatabase.fetchAndParseGeometry();
+        _isBorderLoaded = true;
         setState(() {});
+        await _mapUtils.drawPolygonsOnMap(_borderPolygons);
       } catch (e) {
         print('Lỗi khi lấy dữ liệu đường viền: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể tải dữ liệu đường viền. Vui lòng thử lại sau.')),
-        );
+        _showErrorSnackBar(
+            'Không thể tải dữ liệu đường viền. Vui lòng thử lại sau.');
+      }
+    }
+  }
+
+  Future<void> _fetchCommunes() async {
+    if (_database.connection != null && !_isCommunesLoaded) {
+      try {
+        _communes = await _database.fetchCommunesData();
+        _isCommunesLoaded = true;
+        setState(() {});
+        await _mapUtils.drawCommunesOnMap(_communes);
+      } catch (e) {
+        print('Lỗi khi lấy dữ liệu xã: $e');
+        _showErrorSnackBar('Không thể tải dữ liệu xã. Vui lòng thử lại sau.');
       }
     }
   }
 
   void _onStyleLoaded() async {
     if (_mapUtils != null) {
-      try {
+      if (_isDistrictsVisible && _isDistrictsLoaded) {
         await _mapUtils.drawDistrictsOnMap(_districts);
-        await _mapUtils.drawPolygonsOnMap(_borderPolygons);
-        
-        // Thiết lập trạng thái hiển thị ban đầu
-        for (var district in _districts) {
-          await _mapUtils.toggleDistrictVisibility(
-              district.id, _districtVisibility[district.id] ?? true);
-        }
-        await _mapUtils.toggleBorderVisibility(_isBorderVisible);
-        
-        // Ẩn tất cả các huyện nếu _isDistrictsVisible là false
-        if (!_isDistrictsVisible) {
-          await _mapUtils.toggleAllDistrictsVisibility(false);
-        }
-      } catch (e) {
-        print('Lỗi khi vẽ huyện hoặc đường viền: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể hiển thị dữ liệu huyện hoặc đường viền. Vui lòng thử lại sau.')),
-        );
       }
+      if (_isBorderVisible && _isBorderLoaded) {
+        await _mapUtils.drawPolygonsOnMap(_borderPolygons);
+      }
+      if (_isCommunesVisible && _isCommunesLoaded) {
+        await _mapUtils.drawCommunesOnMap(_communes);
+      }
+
+      for (var district in _districts) {
+        await _mapUtils.toggleDistrictVisibility(
+            district.id, _districtVisibility[district.id] ?? true);
+      }
+      await _mapUtils.toggleBorderVisibility(_isBorderVisible);
+      await _mapUtils.toggleCommunesVisibility(_isCommunesVisible);
     }
 
     if (_currentLocation != null) {
@@ -114,7 +131,11 @@ class MapboxPageState extends State<MapboxPage> {
       setState(() {
         _isDistrictsVisible = value;
       });
-      await _mapUtils.toggleAllDistrictsVisibility(value);
+      if (_isDistrictsVisible && !_isDistrictsLoaded) {
+        await _fetchDistricts();
+      } else {
+        await _mapUtils.toggleAllDistrictsVisibility(value);
+      }
     }
   }
 
@@ -123,7 +144,24 @@ class MapboxPageState extends State<MapboxPage> {
       setState(() {
         _isBorderVisible = value;
       });
-      await _mapUtils.toggleBorderVisibility(value);
+      if (_isBorderVisible && !_isBorderLoaded) {
+        await _fetchBorderPolygons();
+      } else {
+        await _mapUtils.toggleBorderVisibility(value);
+      }
+    }
+  }
+
+  void _toggleCommunesVisibility(bool? value) async {
+    if (value != null) {
+      setState(() {
+        _isCommunesVisible = value;
+      });
+      if (_isCommunesVisible && !_isCommunesLoaded) {
+        await _fetchCommunes();
+      } else {
+        await _mapUtils.toggleCommunesVisibility(value);
+      }
     }
   }
 
@@ -147,11 +185,13 @@ class MapboxPageState extends State<MapboxPage> {
         currentStyle: currentStyle,
         isDistrictsVisible: _isDistrictsVisible,
         isBorderVisible: _isBorderVisible,
+        isCommunesVisible: _isCommunesVisible,
         districts: _districts,
         districtVisibility: _districtVisibility,
         onStyleChanged: _changeMapStyle,
         onDistrictsVisibilityChanged: _toggleDistrictsVisibility,
         onBorderVisibilityChanged: _toggleBorderVisibility,
+        onCommunesVisibilityChanged: _toggleCommunesVisibility,
         onDistrictVisibilityChanged: _toggleDistrictVisibility,
       ),
       body: Stack(
@@ -226,11 +266,13 @@ class MapboxPageState extends State<MapboxPage> {
   }
 
   void _moveToDefaultLocation() {
-    _mapController.animateCamera(CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom));
+    _mapController
+        .animateCamera(CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom));
   }
 
   void _initializeLocationService() async {
-    bool permissionGranted = await _locationService.checkAndRequestLocationPermission(context);
+    bool permissionGranted =
+        await _locationService.checkAndRequestLocationPermission(context);
     if (permissionGranted) {
       _locationService.startLocationUpdates((location) {
         setState(() {
@@ -244,7 +286,12 @@ class MapboxPageState extends State<MapboxPage> {
   void _handleLocationError(dynamic e) {
     String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
     print(errorMessage);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+    _showErrorSnackBar(errorMessage);
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

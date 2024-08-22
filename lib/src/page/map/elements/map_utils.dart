@@ -1,11 +1,13 @@
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
+import 'package:truotlo/src/database/commune.dart';
 
 class MapUtils {
   final MapboxMapController _mapController;
   Circle? _locationCircle;
   Map<int, List<Fill>> _drawnDistricts = {};
   List<Line> _drawnPolygons = [];
+  List<Line> _drawnCommunes = [];
 
   MapUtils(this._mapController);
 
@@ -30,7 +32,6 @@ class MapUtils {
       }
     } catch (e) {
       print('Lỗi khi cập nhật vòng tròn vị trí: $e');
-      // Xử lý lỗi một cách phù hợp, ví dụ: hiển thị thông báo cho người dùng
     }
   }
 
@@ -56,7 +57,6 @@ class MapUtils {
         fills.add(fill);
       } catch (e) {
         print('Lỗi khi vẽ huyện ${district.name}: $e');
-        // Xử lý lỗi một cách phù hợp
       }
     }
     _drawnDistricts[district.id] = fills;
@@ -70,7 +70,6 @@ class MapUtils {
               fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của huyện $districtId: $e');
-          // Xử lý lỗi một cách phù hợp
         }
       }
     }
@@ -84,7 +83,6 @@ class MapUtils {
               fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của tất cả các huyện: $e');
-          // Xử lý lỗi một cách phù hợp
         }
       }
     }
@@ -97,7 +95,6 @@ class MapUtils {
           await _mapController.removeFill(fill);
         } catch (e) {
           print('Lỗi khi xóa fill của huyện: $e');
-          // Xử lý lỗi một cách phù hợp
         }
       }
     }
@@ -120,7 +117,6 @@ class MapUtils {
         _drawnPolygons.add(line);
       } catch (e) {
         print('Lỗi khi vẽ đa giác: $e');
-        // Xử lý lỗi một cách phù hợp
       }
     }
   }
@@ -131,7 +127,6 @@ class MapUtils {
         await _mapController.removeLine(line);
       } catch (e) {
         print('Lỗi khi xóa đường của đa giác: $e');
-        // Xử lý lỗi một cách phù hợp
       }
     }
     _drawnPolygons.clear();
@@ -145,11 +140,57 @@ class MapUtils {
               line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của đường biên: $e');
-          // Xử lý lỗi một cách phù hợp
         }
       }
     } catch (e) {
       print('lỗi: $e');
+    }
+  }
+
+  // Phương thức mới để vẽ xã
+  Future<void> drawCommunesOnMap(List<Commune> communes) async {
+    await clearCommunesOnMap();
+
+    for (var commune in communes) {
+      for (var polygon in commune.polygons) {
+        try {
+          Line line = await _mapController.addLine(
+            LineOptions(
+              geometry: polygon,
+              lineColor: "#000000",
+              lineWidth: 1.0,
+              lineOpacity: 1.0,
+            ),
+          );
+          _drawnCommunes.add(line);
+        } catch (e) {
+          print('Lỗi khi vẽ xã: $e');
+        }
+      }
+    }
+  }
+
+  // Phương thức mới để xóa xã
+  Future<void> clearCommunesOnMap() async {
+    for (var line in _drawnCommunes) {
+      try {
+        await _mapController.removeLine(line);
+      } catch (e) {
+        print('Lỗi khi xóa đường của xã: $e');
+      }
+    }
+    _drawnCommunes.clear();
+  }
+
+  // Phương thức mới để ẩn/hiện xã
+  Future<void> toggleCommunesVisibility(bool isVisible) async {
+    for (var line in _drawnCommunes) {
+      try {
+        await _mapController.updateLine(
+            line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
+      } catch (e) {
+        print('Lỗi khi chuyển đổi tính hiển thị của xã: $e');
+      }
     }
   }
 }

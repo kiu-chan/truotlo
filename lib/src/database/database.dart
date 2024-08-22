@@ -3,6 +3,7 @@ import 'package:postgres/postgres.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/database/border.dart';
 import 'package:truotlo/src/database/district.dart';
+import 'package:truotlo/src/database/commune.dart';
 
 class DefaultDatabase {
   bool _connectionFailed = false;
@@ -10,6 +11,7 @@ class DefaultDatabase {
 
   late BorderDatabase borderDatabase;
   late DistrictDatabase districtDatabase;
+  late CommuneDatabase communeDatabase;
 
   Future<void> connect() async {
     try {
@@ -27,6 +29,7 @@ class DefaultDatabase {
 
       borderDatabase = BorderDatabase(connection!);
       districtDatabase = DistrictDatabase(connection!);
+      communeDatabase = CommuneDatabase(connection!);
     } catch (e) {
       print('Failed to connect to database: $e');
       _connectionFailed = true;
@@ -40,5 +43,9 @@ class DefaultDatabase {
   }
     Future<List<District>> fetchDistrictsData() async {
     return await districtDatabase.fetchDistrictsData();
+  }
+
+  Future<List<Commune>> fetchCommunesData() async {
+    return await communeDatabase.fetchCommunesData();
   }
 }
