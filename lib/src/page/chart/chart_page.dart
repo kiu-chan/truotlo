@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:truotlo/src/data/chart_data.dart';
-import 'package:truotlo/src/data/landslide_data.dart';
+import 'package:truotlo/src/data/chart/chart_data.dart';
+import 'package:truotlo/src/data/chart/landslide_data.dart';
 import 'package:truotlo/src/page/chart/chart_menu.dart';
 import 'chart_data_processor.dart';
 import 'chart_utils.dart';

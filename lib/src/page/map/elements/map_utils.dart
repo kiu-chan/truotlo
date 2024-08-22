@@ -1,5 +1,6 @@
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
+import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/database/commune.dart';
 
 class MapUtils {
@@ -8,6 +9,7 @@ class MapUtils {
   Map<int, List<Fill>> _drawnDistricts = {};
   List<Line> _drawnPolygons = [];
   List<Line> _drawnCommunes = [];
+  List<Circle> _drawnLandslidePoints = [];
 
   MapUtils(this._mapController);
 
@@ -190,6 +192,48 @@ class MapUtils {
             line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
       } catch (e) {
         print('Lỗi khi chuyển đổi tính hiển thị của xã: $e');
+      }
+    }
+  }
+
+  Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
+    await clearLandslidePointsOnMap();
+
+    for (var point in points) {
+      try {
+        Circle circle = await _mapController.addCircle(
+          CircleOptions(
+            geometry: point.location,
+            circleRadius: 6.0,
+            circleColor: '#FF0000',
+            circleOpacity: 0.7,
+          ),
+        );
+        _drawnLandslidePoints.add(circle);
+      } catch (e) {
+        print('Error drawing landslide point: $e');
+      }
+    }
+  }
+
+  Future<void> clearLandslidePointsOnMap() async {
+    for (var circle in _drawnLandslidePoints) {
+      try {
+        await _mapController.removeCircle(circle);
+      } catch (e) {
+        print('Error removing landslide point: $e');
+      }
+    }
+    _drawnLandslidePoints.clear();
+  }
+
+  Future<void> toggleLandslidePointsVisibility(bool isVisible) async {
+    for (var circle in _drawnLandslidePoints) {
+      try {
+        await _mapController.updateCircle(
+            circle, CircleOptions(circleOpacity: isVisible ? 0.7 : 0.0));
+      } catch (e) {
+        print('Error toggling landslide point visibility: $e');
       }
     }
   }

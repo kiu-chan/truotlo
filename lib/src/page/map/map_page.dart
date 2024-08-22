@@ -5,6 +5,7 @@ import 'package:truotlo/src/data/map/map_data.dart';
 import 'package:truotlo/src/config/map.dart';
 import 'package:truotlo/src/database/database.dart';
 import 'package:truotlo/src/database/commune.dart';
+import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'elements/map_utils.dart';
 import 'elements/location_service.dart';
 import 'menu.dart';
@@ -33,14 +34,17 @@ class MapboxPageState extends State<MapboxPage> {
   bool _isDistrictsVisible = true;
   bool _isBorderVisible = false;
   bool _isCommunesVisible = false;
+  bool _isLandslidePointsVisible = true;
   List<District> _districts = [];
   List<List<LatLng>> _borderPolygons = [];
   List<Commune> _communes = [];
+  List<LandslidePoint> _landslidePoints = [];
   Map<int, bool> _districtVisibility = {};
 
   bool _isDistrictsLoaded = false;
   bool _isBorderLoaded = false;
   bool _isCommunesLoaded = false;
+  bool _isLandslidePointsLoaded = false;
 
   @override
   void initState() {
@@ -60,6 +64,9 @@ class MapboxPageState extends State<MapboxPage> {
     }
     if(_isCommunesVisible) {
       await _fetchCommunes();
+    }
+    if(_isLandslidePointsVisible) {
+      await _fetchLandslidePoints();
     }
   }
 
@@ -111,6 +118,20 @@ class MapboxPageState extends State<MapboxPage> {
     }
   }
 
+  Future<void> _fetchLandslidePoints() async {
+    if (_database.connection != null && !_isLandslidePointsLoaded) {
+      try {
+        _landslidePoints = await _database.fetchLandslidePoints();
+        _isLandslidePointsLoaded = true;
+        setState(() {});
+        await _mapUtils.drawLandslidePointsOnMap(_landslidePoints);
+      } catch (e) {
+        print('Lỗi khi lấy dữ liệu điểm trượt lở: $e');
+        _showErrorSnackBar('Không thể tải dữ liệu điểm trượt lở. Vui lòng thử lại sau.');
+      }
+    }
+  }
+
   void _onStyleLoaded() async {
     if (_mapUtils != null) {
       if (_isDistrictsVisible && _isDistrictsLoaded) {
@@ -122,6 +143,9 @@ class MapboxPageState extends State<MapboxPage> {
       if (_isCommunesVisible && _isCommunesLoaded) {
         await _mapUtils.drawCommunesOnMap(_communes);
       }
+      if (_isLandslidePointsVisible && _isLandslidePointsLoaded) {
+        await _mapUtils.drawLandslidePointsOnMap(_landslidePoints);
+      }
 
       for (var district in _districts) {
         await _mapUtils.toggleDistrictVisibility(
@@ -129,6 +153,7 @@ class MapboxPageState extends State<MapboxPage> {
       }
       await _mapUtils.toggleBorderVisibility(_isBorderVisible);
       await _mapUtils.toggleCommunesVisibility(_isCommunesVisible);
+      await _mapUtils.toggleLandslidePointsVisibility(_isLandslidePointsVisible);
     }
 
     if (_currentLocation != null) {
@@ -175,6 +200,19 @@ class MapboxPageState extends State<MapboxPage> {
     }
   }
 
+  void _toggleLandslidePointsVisibility(bool? value) async {
+    if (value != null) {
+      setState(() {
+        _isLandslidePointsVisible = value;
+      });
+      if (_isLandslidePointsVisible && !_isLandslidePointsLoaded) {
+        await _fetchLandslidePoints();
+      } else {
+        await _mapUtils.toggleLandslidePointsVisibility(value);
+      }
+    }
+  }
+
   void _toggleDistrictVisibility(int districtId, bool? value) async {
     if (value != null) {
       setState(() {
@@ -196,12 +234,14 @@ class MapboxPageState extends State<MapboxPage> {
         isDistrictsVisible: _isDistrictsVisible,
         isBorderVisible: _isBorderVisible,
         isCommunesVisible: _isCommunesVisible,
+        isLandslidePointsVisible: _isLandslidePointsVisible,
         districts: _districts,
         districtVisibility: _districtVisibility,
         onStyleChanged: _changeMapStyle,
         onDistrictsVisibilityChanged: _toggleDistrictsVisibility,
         onBorderVisibilityChanged: _toggleBorderVisibility,
         onCommunesVisibilityChanged: _toggleCommunesVisibility,
+        onLandslidePointsVisibilityChanged: _toggleLandslidePointsVisibility,
         onDistrictVisibilityChanged: _toggleDistrictVisibility,
       ),
       body: Stack(

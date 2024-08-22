@@ -8,6 +8,7 @@ class MapMenu extends StatelessWidget {
   final bool isDistrictsVisible;
   final bool isBorderVisible;
   final bool isCommunesVisible;
+  final bool isLandslidePointsVisible;
   final List<District> districts;
   final Map<int, bool> districtVisibility;
   final Function(String?) onStyleChanged;
@@ -15,6 +16,7 @@ class MapMenu extends StatelessWidget {
   final Function(bool?) onBorderVisibilityChanged;
   final Function(int, bool?) onDistrictVisibilityChanged;
   final Function(bool?) onCommunesVisibilityChanged;
+  final Function(bool?) onLandslidePointsVisibilityChanged;
 
   const MapMenu({
     Key? key,
@@ -30,6 +32,8 @@ class MapMenu extends StatelessWidget {
     required this.onDistrictVisibilityChanged,
     required this.isCommunesVisible,
     required this.onCommunesVisibilityChanged,
+    required this.isLandslidePointsVisible,
+    required this.onLandslidePointsVisibilityChanged,
   }) : super(key: key);
 
   @override
@@ -75,6 +79,11 @@ class MapMenu extends StatelessWidget {
                 title: const Text('Xã'),
                 value: isCommunesVisible,
                 onChanged: onCommunesVisibilityChanged,
+              ),
+              CheckboxListTile(
+                title: const Text('Điểm trượt lở'),
+                value: isLandslidePointsVisible,
+                onChanged: onLandslidePointsVisibilityChanged,
               ),
             ],
           ),

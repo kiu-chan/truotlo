@@ -1,5 +1,5 @@
-import 'package:truotlo/src/data/chart_data.dart';
-import 'package:truotlo/src/data/landslide_data.dart';
+import 'package:truotlo/src/data/chart/chart_data.dart';
+import 'package:truotlo/src/data/chart/landslide_data.dart';
 
 class ChartDataProcessor {
   List<ChartData> processData(List<LandslideDataModel> filteredData) {

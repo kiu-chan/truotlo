@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:truotlo/src/data/chart_data.dart';
-import 'package:truotlo/src/data/landslide_data.dart';
+import 'package:truotlo/src/data/chart/chart_data.dart';
+import 'package:truotlo/src/data/chart/landslide_data.dart';
 
 class ChartUtils {
   static void initLineVisibility(Map<int, bool> lineVisibility, int dataLength) {
