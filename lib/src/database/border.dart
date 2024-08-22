@@ -6,7 +6,7 @@ class BorderDatabase {
 
   BorderDatabase(this.connection);
 
-  Future<List<List<LatLng>>> fetchAndParseGeometry() async {
+    Future<List<List<LatLng>>> fetchAndParseGeometry() async {
     final results = await connection.query("SELECT ST_AsText(geom) as geom FROM public.borders");
     
     List<List<LatLng>> polygons = [];
@@ -41,5 +41,4 @@ class BorderDatabase {
     
     return points;
   }
-
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/map_data.dart';
 import 'package:truotlo/src/config/map.dart';
 import 'package:truotlo/src/database/database.dart';
@@ -7,7 +8,7 @@ import 'map_utils.dart';
 import 'location_service.dart';
 
 class MapboxPage extends StatefulWidget {
-  const MapboxPage({super.key});
+  const MapboxPage({Key? key}) : super(key: key);
 
   @override
   MapboxPageState createState() => MapboxPageState();
@@ -26,7 +27,11 @@ class MapboxPageState extends State<MapboxPage> {
   String mapToken = MapConfig().getMapToken();
 
   LatLng? _currentLocation;
+  bool _isDistrictsVisible = true;
   bool _isBorderVisible = true;
+  List<District> _districts = [];
+  List<List<LatLng>> _borderPolygons = [];
+  Map<int, bool> _districtVisibility = {};
 
   @override
   void initState() {
@@ -37,79 +42,79 @@ class MapboxPageState extends State<MapboxPage> {
 
   Future<void> _connectToDatabase() async {
     await _database.connect();
+    await _fetchDistricts();
+    await _fetchBorderPolygons();
+    _onStyleLoaded();
   }
 
-  void _initializeLocationService() async {
-    bool permissionGranted = await _locationService.checkAndRequestLocationPermission(context);
-    if (permissionGranted) {
-      _locationService.startLocationUpdates(
-        (location) {
-          setState(() {
-            _currentLocation = location;
-          });
-          _mapUtils.updateLocationOnMap(location);
-        },
-        _handleLocationError
-      );
+  Future<void> _fetchDistricts() async {
+    if (_database.connection != null) {
+      try {
+        _districts = await _database.fetchDistrictsData();
+        _districtVisibility = {
+          for (var district in _districts) district.id: true
+        };
+        setState(() {});
+      } catch (e) {
+        print('Lỗi khi lấy dữ liệu huyện: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không thể tải dữ liệu huyện. Vui lòng thử lại sau.')),
+        );
+      }
     }
   }
 
-  void _handleLocationError(dynamic e) {
-    String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
-    print(errorMessage);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+  Future<void> _fetchBorderPolygons() async {
+    if (_database.connection != null) {
+      try {
+        _borderPolygons = await _database.borderDatabase.fetchAndParseGeometry();
+        setState(() {});
+      } catch (e) {
+        print('Lỗi khi lấy dữ liệu đường viền: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không thể tải dữ liệu đường viền. Vui lòng thử lại sau.')),
+        );
+      }
+    }
   }
 
   void _onStyleLoaded() async {
-    if (_database.connection != null) {
+    if (_mapUtils != null) {
       try {
-        List<List<LatLng>> polygons = await _database.fetchAndParseGeometry();
-        if (_isBorderVisible) {
-          await _mapUtils.drawPolygonsOnMap(polygons);
-        } else {
-          await _mapUtils.clearPolygonsOnMap();
+        await _mapUtils.drawDistrictsOnMap(_districts);
+        await _mapUtils.drawPolygonsOnMap(_borderPolygons);
+        
+        // Thiết lập trạng thái hiển thị ban đầu
+        for (var district in _districts) {
+          await _mapUtils.toggleDistrictVisibility(
+              district.id, _districtVisibility[district.id] ?? true);
+        }
+        await _mapUtils.toggleBorderVisibility(_isBorderVisible);
+        
+        // Ẩn tất cả các huyện nếu _isDistrictsVisible là false
+        if (!_isDistrictsVisible) {
+          await _mapUtils.toggleAllDistrictsVisibility(false);
         }
       } catch (e) {
-        print('Error fetching or drawing polygons: $e');
+        print('Lỗi khi vẽ huyện hoặc đường viền: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể tải dữ liệu bản đồ. Vui lòng thử lại sau.')),
+          SnackBar(content: Text('Không thể hiển thị dữ liệu huyện hoặc đường viền. Vui lòng thử lại sau.')),
         );
       }
-    } else {
-      print('Database connection not available');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra kết nối mạng.')),
-      );
     }
+
     if (_currentLocation != null) {
       _mapUtils.updateLocationOnMap(_currentLocation!);
     }
   }
 
-  void _onMapCreated(MapboxMapController controller) {
-    _mapController = controller;
-    _mapUtils = MapUtils(_mapController);
-  }
-
-  void _changeMapStyle(String style) {
-    setState(() {
-      currentStyle = style;
-    });
-    Navigator.pop(context);
-  }
-
-  void _moveToCurrentLocation() {
-    if (_currentLocation != null) {
-      _mapController.animateCamera(
-        CameraUpdate.newLatLng(_currentLocation!),
-      );
+  void _toggleDistrictsVisibility(bool? value) async {
+    if (value != null) {
+      setState(() {
+        _isDistrictsVisible = value;
+      });
+      await _mapUtils.toggleAllDistrictsVisibility(value);
     }
-  }
-
-  void _moveToDefaultLocation() {
-    _mapController.animateCamera(
-      CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom),
-    );
   }
 
   void _toggleBorderVisibility(bool? value) async {
@@ -117,12 +122,16 @@ class MapboxPageState extends State<MapboxPage> {
       setState(() {
         _isBorderVisible = value;
       });
-      if (_isBorderVisible) {
-        List<List<LatLng>> polygons = await _database.fetchAndParseGeometry();
-        await _mapUtils.drawPolygonsOnMap(polygons);
-      } else {
-        await _mapUtils.clearPolygonsOnMap();
-      }
+      await _mapUtils.toggleBorderVisibility(value);
+    }
+  }
+
+  void _toggleDistrictVisibility(int districtId, bool? value) async {
+    if (value != null) {
+      setState(() {
+        _districtVisibility[districtId] = value;
+      });
+      await _mapUtils.toggleDistrictVisibility(districtId, value);
     }
   }
 
@@ -137,32 +146,22 @@ class MapboxPageState extends State<MapboxPage> {
           padding: EdgeInsets.zero,
           children: <Widget>[
             const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                'Tùy chọn bản đồ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
-              ),
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Text('Tùy chọn bản đồ', style: TextStyle(color: Colors.white, fontSize: 24)),
             ),
             ExpansionTile(
               leading: const Icon(Icons.map),
               title: const Text('Bản đồ'),
               children: <Widget>[
                 ...styleCategories.map((category) => ExpansionTile(
-                      title: Text(category.name),
-                      children: category.styles
-                          .map((style) => RadioListTile<String>(
-                                title: Text(style.name),
-                                value: style.url,
-                                groupValue: currentStyle,
-                                onChanged: (value) => _changeMapStyle(value!),
-                              ))
-                          .toList(),
-                    )),
+                  title: Text(category.name),
+                  children: category.styles.map((style) => RadioListTile<String>(
+                    title: Text(style.name),
+                    value: style.url,
+                    groupValue: currentStyle,
+                    onChanged: (value) => _changeMapStyle(value!),
+                  )).toList(),
+                )),
               ],
             ),
             ExpansionTile(
@@ -170,12 +169,32 @@ class MapboxPageState extends State<MapboxPage> {
               title: const Text('Khu vực'),
               children: <Widget>[
                 CheckboxListTile(
-                  title: const Text('Hiển thị ranh giới'),
+                  title: const Text('Huyện'),
+                  value: _isDistrictsVisible,
+                  onChanged: _toggleDistrictsVisibility,
+                ),
+                CheckboxListTile(
+                  title: const Text('Ranh giới'),
                   value: _isBorderVisible,
                   onChanged: _toggleBorderVisibility,
                 ),
               ],
             ),
+            if (_isDistrictsVisible)
+              ExpansionTile(
+                leading: const Icon(Icons.map_outlined),
+                title: const Text('Huyện'),
+                children: _districts.map((district) => CheckboxListTile(
+                  title: Text(district.name),
+                  value: _districtVisibility[district.id],
+                  onChanged: (bool? value) => _toggleDistrictVisibility(district.id, value),
+                  secondary: Container(
+                    width: 24,
+                    height: 24,
+                    color: district.color,
+                  ),
+                )).toList(),
+              ),
           ],
         ),
       ),
@@ -200,22 +219,11 @@ class MapboxPageState extends State<MapboxPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 8,
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8)],
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.location_pin, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text(
-                      'Tọa độ: ${_currentLocation!.latitude.toStringAsFixed(6)}, ${_currentLocation!.longitude.toStringAsFixed(6)}',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ],
+                child: Text(
+                  'Vị trí hiện tại: ${_currentLocation!.latitude.toStringAsFixed(6)}, ${_currentLocation!.longitude.toStringAsFixed(6)}',
+                  style: TextStyle(fontSize: 12),
                 ),
               ),
             ),
@@ -238,6 +246,47 @@ class MapboxPageState extends State<MapboxPage> {
         ],
       ),
     );
+  }
+
+  void _onMapCreated(MapboxMapController controller) {
+    _mapController = controller;
+    _mapUtils = MapUtils(_mapController);
+    _onStyleLoaded();
+  }
+
+  void _changeMapStyle(String style) {
+    setState(() {
+      currentStyle = style;
+    });
+    Navigator.pop(context);
+  }
+
+  void _moveToCurrentLocation() {
+    if (_currentLocation != null) {
+      _mapController.animateCamera(CameraUpdate.newLatLng(_currentLocation!));
+    }
+  }
+
+  void _moveToDefaultLocation() {
+    _mapController.animateCamera(CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom));
+  }
+
+  void _initializeLocationService() async {
+    bool permissionGranted = await _locationService.checkAndRequestLocationPermission(context);
+    if (permissionGranted) {
+      _locationService.startLocationUpdates((location) {
+        setState(() {
+          _currentLocation = location;
+        });
+        _mapUtils.updateLocationOnMap(location);
+      }, _handleLocationError);
+    }
+  }
+
+  void _handleLocationError(dynamic e) {
+    String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
+    print(errorMessage);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
   }
 
   @override

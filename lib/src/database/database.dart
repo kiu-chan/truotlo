@@ -1,12 +1,15 @@
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:postgres/postgres.dart';
+import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/database/border.dart';
+import 'package:truotlo/src/database/district.dart';
 
 class DefaultDatabase {
   bool _connectionFailed = false;
   PostgreSQLConnection? connection;
 
   late BorderDatabase borderDatabase;
+  late DistrictDatabase districtDatabase;
 
   Future<void> connect() async {
     try {
@@ -23,6 +26,7 @@ class DefaultDatabase {
       _connectionFailed = false;
 
       borderDatabase = BorderDatabase(connection!);
+      districtDatabase = DistrictDatabase(connection!);
     } catch (e) {
       print('Failed to connect to database: $e');
       _connectionFailed = true;
@@ -33,5 +37,8 @@ class DefaultDatabase {
 
   Future<List<List<LatLng>>> fetchAndParseGeometry() async {
     return await borderDatabase.fetchAndParseGeometry();
+  }
+    Future<List<District>> fetchDistrictsData() async {
+    return await districtDatabase.fetchDistrictsData();
   }
 }

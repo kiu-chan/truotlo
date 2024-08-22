@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:truotlo/src/page/home/elements/warning.dart';
 import 'elements/weather_service.dart';
 import '../../data/location_data.dart';
 
@@ -218,6 +217,7 @@ class WeatherForecastCard extends StatelessWidget {
     final humidity = currentWeather!['main']['humidity'];
     final windSpeed = currentWeather!['wind']['speed'];
     final description = currentWeather!['weather'][0]['description'];
+    final iconPath = currentWeather!['iconPath'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,7 +233,7 @@ class WeatherForecastCard extends StatelessWidget {
         const SizedBox(height: 16),
         Row(
           children: [
-            const Icon(Icons.cloud, color: Colors.white, size: 48),
+            Image.asset(iconPath, width: 48, height: 48),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,16 +272,18 @@ class WeatherForecastCard extends StatelessWidget {
     final List<dynamic> forecastList = forecast!['list'];
 
     for (int i = 0; i < 5; i++) {
-      final dailyForecast = forecastList[i * 8]; // Get forecast for every 24 hours
+      final dailyForecast = forecastList[i * 8];
       final temp = dailyForecast['main']['temp'];
       final date = DateTime.fromMillisecondsSinceEpoch(dailyForecast['dt'] * 1000);
       final dayName = DateFormat('E').format(date);
+      final iconCode = dailyForecast['weather'][0]['icon'];
+      final iconPath = 'lib/assets/clouds/$iconCode.png';
 
       forecastWidgets.add(
         Column(
           children: [
             Text(dayName, style: const TextStyle(color: Colors.white)),
-            const Icon(Icons.cloud, color: Colors.white),
+            Image.asset(iconPath, width: 32, height: 32),
             Text('${temp.toStringAsFixed(1)}°', style: const TextStyle(color: Colors.white)),
           ],
         ),
@@ -292,3 +294,53 @@ class WeatherForecastCard extends StatelessWidget {
   }
 }
 
+class DisasterWarningCard extends StatelessWidget {
+  const DisasterWarningCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      color: Colors.blue,
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'DỰ BÁO LÚC: 08:26 NGÀY 17/08',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            WarningRow(icon: Icons.warning, text: 'Số điểm nguy cơ sạt lở', value: '0'),
+            WarningRow(icon: Icons.warning, text: 'Số công trình có nguy cơ bị thiệt hại', value: '0'),
+            WarningRow(icon: Icons.warning, text: 'Số người có nguy cơ bị ảnh hưởng', value: '0'),
+            WarningRow(icon: Icons.warning, text: 'Diện tích nông nghiệp bị thiệt hại', value: '0'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WarningRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final String value;
+
+  const WarningRow({super.key, required this.icon, required this.text, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.yellow),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(color: Colors.white))),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
