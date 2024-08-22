@@ -108,7 +108,11 @@ class ChartPageState extends State<ChartPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Biểu đồ'),
+        title: const Text(
+          'Biểu đồ',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.blue,
       ),
       endDrawer: ChartMenu(
         chartNames: _chartDataList.map((c) => c.name).toList(),

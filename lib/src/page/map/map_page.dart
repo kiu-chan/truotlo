@@ -56,16 +56,16 @@ class MapboxPageState extends State<MapboxPage> {
   Future<void> _connectToDatabase() async {
     await _database.connect();
 
-    if(_isDistrictsVisible) {
+    if (_isDistrictsVisible) {
       await _fetchDistricts();
     }
-    if(_isBorderVisible) {
+    if (_isBorderVisible) {
       await _fetchBorderPolygons();
     }
-    if(_isCommunesVisible) {
+    if (_isCommunesVisible) {
       await _fetchCommunes();
     }
-    if(_isLandslidePointsVisible) {
+    if (_isLandslidePointsVisible) {
       await _fetchLandslidePoints();
     }
   }
@@ -127,7 +127,8 @@ class MapboxPageState extends State<MapboxPage> {
         await _mapUtils.drawLandslidePointsOnMap(_landslidePoints);
       } catch (e) {
         print('Lỗi khi lấy dữ liệu điểm trượt lở: $e');
-        _showErrorSnackBar('Không thể tải dữ liệu điểm trượt lở. Vui lòng thử lại sau.');
+        _showErrorSnackBar(
+            'Không thể tải dữ liệu điểm trượt lở. Vui lòng thử lại sau.');
       }
     }
   }
@@ -153,7 +154,8 @@ class MapboxPageState extends State<MapboxPage> {
       }
       await _mapUtils.toggleBorderVisibility(_isBorderVisible);
       await _mapUtils.toggleCommunesVisibility(_isCommunesVisible);
-      await _mapUtils.toggleLandslidePointsVisibility(_isLandslidePointsVisible);
+      await _mapUtils
+          .toggleLandslidePointsVisibility(_isLandslidePointsVisible);
     }
 
     if (_currentLocation != null) {
@@ -226,7 +228,11 @@ class MapboxPageState extends State<MapboxPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bản đồ'),
+        title: const Text(
+          'Bản đồ',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.blue,
       ),
       endDrawer: MapMenu(
         styleCategories: styleCategories,
