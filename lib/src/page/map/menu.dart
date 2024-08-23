@@ -44,21 +44,24 @@ class MapMenu extends StatelessWidget {
         children: <Widget>[
           const DrawerHeader(
             decoration: BoxDecoration(color: Colors.blue),
-            child: Text('Tùy chọn bản đồ', style: TextStyle(color: Colors.white, fontSize: 24)),
+            child: Text('Tùy chọn bản đồ',
+                style: TextStyle(color: Colors.white, fontSize: 24)),
           ),
           ExpansionTile(
             leading: const Icon(Icons.map),
             title: const Text('Bản đồ'),
             children: <Widget>[
               ...styleCategories.map((category) => ExpansionTile(
-                title: Text(category.name),
-                children: category.styles.map((style) => RadioListTile<String>(
-                  title: Text(style.name),
-                  value: style.url,
-                  groupValue: currentStyle,
-                  onChanged: onStyleChanged,
-                )).toList(),
-              )),
+                    title: Text(category.name),
+                    children: category.styles
+                        .map((style) => RadioListTile<String>(
+                              title: Text(style.name),
+                              value: style.url,
+                              groupValue: currentStyle,
+                              onChanged: onStyleChanged,
+                            ))
+                        .toList(),
+                  )),
             ],
           ),
           ExpansionTile(
@@ -91,11 +94,14 @@ class MapMenu extends StatelessWidget {
             ExpansionTile(
               leading: const Icon(Icons.map_outlined),
               title: const Text('Huyện'),
-              children: districts.map((district) => CheckboxListTile(
-                title: Text(district.name),
-                value: districtVisibility[district.id],
-                onChanged: (bool? value) => onDistrictVisibilityChanged(district.id, value),
-              )).toList(),
+              children: districts
+                  .map((district) => CheckboxListTile(
+                        title: Text(district.name),
+                        value: districtVisibility[district.id],
+                        onChanged: (bool? value) =>
+                            onDistrictVisibilityChanged(district.id, value),
+                      ))
+                  .toList(),
             ),
         ],
       ),
