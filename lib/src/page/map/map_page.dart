@@ -9,6 +9,8 @@ import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'elements/map_utils.dart';
 import 'elements/location_service.dart';
 import 'menu.dart';
+import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 
 class MapboxPage extends StatefulWidget {
   const MapboxPage({Key? key}) : super(key: key);
@@ -20,10 +22,10 @@ class MapboxPage extends StatefulWidget {
 class MapboxPageState extends State<MapboxPage> {
   String currentStyle = MapboxStyles.MAPBOX_STREETS;
   late MapboxMapController _mapController;
+  late MapUtils _mapUtils;
   final List<MapStyleCategory> styleCategories =
       MapConfig().getStyleCategories();
   final DefaultDatabase _database = DefaultDatabase();
-  late MapUtils _mapUtils;
   final LocationService _locationService = LocationService();
 
   LatLng defaultTarget = MapConfig().getDefaultTarget();
@@ -31,7 +33,7 @@ class MapboxPageState extends State<MapboxPage> {
   String mapToken = MapConfig().getMapToken();
 
   LatLng? _currentLocation;
-  bool _isDistrictsVisible = true;
+  bool _isDistrictsVisible = false;
   bool _isBorderVisible = false;
   bool _isCommunesVisible = false;
   bool _isLandslidePointsVisible = true;
@@ -46,6 +48,8 @@ class MapboxPageState extends State<MapboxPage> {
   bool _isCommunesLoaded = false;
   bool _isLandslidePointsLoaded = false;
 
+  bool _isMapInitialized = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,7 +59,9 @@ class MapboxPageState extends State<MapboxPage> {
 
   Future<void> _connectToDatabase() async {
     await _database.connect();
+  }
 
+  Future<void> _initializeData() async {
     if (_isDistrictsVisible) {
       await _fetchDistricts();
     }
@@ -79,7 +85,9 @@ class MapboxPageState extends State<MapboxPage> {
         };
         _isDistrictsLoaded = true;
         setState(() {});
-        await _mapUtils.drawDistrictsOnMap(_districts);
+        if (_isMapInitialized) {
+          await _mapUtils.drawDistrictsOnMap(_districts);
+        }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu huyện: $e');
         _showErrorSnackBar(
@@ -95,7 +103,9 @@ class MapboxPageState extends State<MapboxPage> {
             await _database.borderDatabase.fetchAndParseGeometry();
         _isBorderLoaded = true;
         setState(() {});
-        await _mapUtils.drawPolygonsOnMap(_borderPolygons);
+        if (_isMapInitialized) {
+          await _mapUtils.drawPolygonsOnMap(_borderPolygons);
+        }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu đường viền: $e');
         _showErrorSnackBar(
@@ -110,7 +120,9 @@ class MapboxPageState extends State<MapboxPage> {
         _communes = await _database.fetchCommunesData();
         _isCommunesLoaded = true;
         setState(() {});
-        await _mapUtils.drawCommunesOnMap(_communes);
+        if (_isMapInitialized) {
+          await _mapUtils.drawCommunesOnMap(_communes);
+        }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu xã: $e');
         _showErrorSnackBar('Không thể tải dữ liệu xã. Vui lòng thử lại sau.');
@@ -124,7 +136,9 @@ class MapboxPageState extends State<MapboxPage> {
         _landslidePoints = await _database.fetchLandslidePoints();
         _isLandslidePointsLoaded = true;
         setState(() {});
-        await _mapUtils.drawLandslidePointsOnMap(_landslidePoints);
+        if (_isMapInitialized) {
+          await _mapUtils.drawLandslidePointsOnMap(_landslidePoints);
+        }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu điểm trượt lở: $e');
         _showErrorSnackBar(
@@ -133,34 +147,89 @@ class MapboxPageState extends State<MapboxPage> {
     }
   }
 
-  void _onStyleLoaded() async {
-    if (_mapUtils != null) {
-      if (_isDistrictsVisible && _isDistrictsLoaded) {
-        await _mapUtils.drawDistrictsOnMap(_districts);
-      }
-      if (_isBorderVisible && _isBorderLoaded) {
-        await _mapUtils.drawPolygonsOnMap(_borderPolygons);
-      }
-      if (_isCommunesVisible && _isCommunesLoaded) {
-        await _mapUtils.drawCommunesOnMap(_communes);
-      }
-      if (_isLandslidePointsVisible && _isLandslidePointsLoaded) {
-        await _mapUtils.drawLandslidePointsOnMap(_landslidePoints);
-      }
+  void _onMapCreated(MapboxMapController controller) async {
+    _mapController = controller;
+    _mapUtils = MapUtils(_mapController);
+    _isMapInitialized = true;
 
-      for (var district in _districts) {
-        await _mapUtils.toggleDistrictVisibility(
-            district.id, _districtVisibility[district.id] ?? true);
-      }
-      await _mapUtils.toggleBorderVisibility(_isBorderVisible);
-      await _mapUtils.toggleCommunesVisibility(_isCommunesVisible);
-      await _mapUtils
-          .toggleLandslidePointsVisibility(_isLandslidePointsVisible);
+    // Thêm icon location_on vào bản đồ
+    final ByteData bytes =
+        await rootBundle.load('lib/assets/location_icon.png');
+    final Uint8List list = bytes.buffer.asUint8List();
+    await _mapController.addImage("location_on", list);
+
+    await _initializeData();
+    // _onStyleLoaded();
+
+    // Add this line to handle symbol taps
+    _mapController.onSymbolTapped.add(_onSymbolTapped);
+  }
+
+  void _onStyleLoaded() async {
+    print(1);
+    if (_isDistrictsVisible && _isDistrictsLoaded) {
+      await _mapUtils.drawDistrictsOnMap(_districts);
     }
+    if (_isBorderVisible && _isBorderLoaded) {
+      await _mapUtils.drawPolygonsOnMap(_borderPolygons);
+    }
+    if (_isCommunesVisible && _isCommunesLoaded) {
+      await _mapUtils.drawCommunesOnMap(_communes);
+    }
+    if (_isLandslidePointsVisible && _isLandslidePointsLoaded) {
+      await _mapUtils.drawLandslidePointsOnMap(_landslidePoints);
+    }
+
+    for (var district in _districts) {
+      await _mapUtils.toggleDistrictVisibility(
+          district.id, _districtVisibility[district.id] ?? true);
+    }
+    await _mapUtils.toggleBorderVisibility(_isBorderVisible);
+    await _mapUtils.toggleCommunesVisibility(_isCommunesVisible);
+    await _mapUtils.toggleLandslidePointsVisibility(_isLandslidePointsVisible);
 
     if (_currentLocation != null) {
       _mapUtils.updateLocationOnMap(_currentLocation!);
     }
+  }
+
+  void _onSymbolTapped(Symbol symbol) async {
+    if (symbol.data != null && symbol.data!['id'] != null) {
+      print(1);
+      int landslideId = symbol.data!['id'];
+      Map<String, dynamic> landslideDetail =
+          await _database.landslideDatabase.fetchLandslideDetail(landslideId);
+      _showLandslideDetailDialog(landslideDetail);
+    }
+  }
+
+  void _showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Thông tin điểm trượt lở'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('ID: ${landslideDetail['id']}'),
+                Text('Vị trí: ${landslideDetail['vi_tri']}'),
+                Text('Xã: ${landslideDetail['ten_xa']}'),
+                Text('Mô tả: ${landslideDetail['mo_ta']}'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Đóng'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _toggleDistrictsVisibility(bool? value) async {
@@ -224,14 +293,57 @@ class MapboxPageState extends State<MapboxPage> {
     }
   }
 
+  void _changeMapStyle(String? style) {
+    if (style != null) {
+      setState(() {
+        currentStyle = style;
+      });
+      Navigator.pop(context);
+    }
+  }
+
+  void _moveToCurrentLocation() {
+    if (_currentLocation != null) {
+      _mapController.animateCamera(CameraUpdate.newLatLng(_currentLocation!));
+    }
+  }
+
+  void _moveToDefaultLocation() {
+    _mapController
+        .animateCamera(CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom));
+  }
+
+  void _initializeLocationService() async {
+    bool permissionGranted =
+        await _locationService.checkAndRequestLocationPermission(context);
+    if (permissionGranted) {
+      _locationService.startLocationUpdates((location) {
+        setState(() {
+          _currentLocation = location;
+        });
+        if (_isMapInitialized) {
+          _mapUtils.updateLocationOnMap(location);
+        }
+      }, _handleLocationError);
+    }
+  }
+
+  void _handleLocationError(dynamic e) {
+    String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
+    print(errorMessage);
+    _showErrorSnackBar(errorMessage);
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Bản đồ',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Bản đồ', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue,
       ),
       endDrawer: MapMenu(
@@ -300,60 +412,11 @@ class MapboxPageState extends State<MapboxPage> {
     );
   }
 
-  void _onMapCreated(MapboxMapController controller) {
-    _mapController = controller;
-    _mapUtils = MapUtils(_mapController);
-    _onStyleLoaded();
-  }
-
-  void _changeMapStyle(String? style) {
-    if (style != null) {
-      setState(() {
-        currentStyle = style;
-      });
-      Navigator.pop(context);
-    }
-  }
-
-  void _moveToCurrentLocation() {
-    if (_currentLocation != null) {
-      _mapController.animateCamera(CameraUpdate.newLatLng(_currentLocation!));
-    }
-  }
-
-  void _moveToDefaultLocation() {
-    _mapController
-        .animateCamera(CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom));
-  }
-
-  void _initializeLocationService() async {
-    bool permissionGranted =
-        await _locationService.checkAndRequestLocationPermission(context);
-    if (permissionGranted) {
-      _locationService.startLocationUpdates((location) {
-        setState(() {
-          _currentLocation = location;
-        });
-        _mapUtils.updateLocationOnMap(location);
-      }, _handleLocationError);
-    }
-  }
-
-  void _handleLocationError(dynamic e) {
-    String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
-    print(errorMessage);
-    _showErrorSnackBar(errorMessage);
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   void dispose() {
     _locationService.stopLocationUpdates();
     _database.connection?.close();
+    _mapController.onSymbolTapped.remove(_onSymbolTapped);
     super.dispose();
   }
 }

@@ -1,4 +1,5 @@
 import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:flutter/material.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/database/commune.dart';
@@ -9,7 +10,7 @@ class MapUtils {
   Map<int, List<Fill>> _drawnDistricts = {};
   List<Line> _drawnPolygons = [];
   List<Line> _drawnCommunes = [];
-  List<Circle> _drawnLandslidePoints = [];
+  List<Symbol> _drawnLandslidePoints = [];
 
   MapUtils(this._mapController);
 
@@ -50,8 +51,7 @@ class MapUtils {
         Fill fill = await _mapController.addFill(
           FillOptions(
             geometry: [polygon],
-            fillColor:
-                '#${district.color.value.toRadixString(16).substring(2)}',
+            fillColor: '#${district.color.value.toRadixString(16).substring(2)}',
             fillOpacity: 0.5,
             fillOutlineColor: '#000000',
           ),
@@ -149,7 +149,6 @@ class MapUtils {
     }
   }
 
-  // Phương thức mới để vẽ xã
   Future<void> drawCommunesOnMap(List<Commune> communes) async {
     await clearCommunesOnMap();
 
@@ -172,7 +171,6 @@ class MapUtils {
     }
   }
 
-  // Phương thức mới để xóa xã
   Future<void> clearCommunesOnMap() async {
     for (var line in _drawnCommunes) {
       try {
@@ -184,7 +182,6 @@ class MapUtils {
     _drawnCommunes.clear();
   }
 
-  // Phương thức mới để ẩn/hiện xã
   Future<void> toggleCommunesVisibility(bool isVisible) async {
     for (var line in _drawnCommunes) {
       try {
@@ -201,25 +198,40 @@ class MapUtils {
 
     for (var point in points) {
       try {
-        Circle circle = await _mapController.addCircle(
-          CircleOptions(
+        Symbol symbol = await _mapController.addSymbol(
+          SymbolOptions(
             geometry: point.location,
-            circleRadius: 6.0,
-            circleColor: '#FF0000',
-            circleOpacity: 0.7,
+            iconImage: 'location_on',
+            iconSize: 1.0,
+            iconColor: '#FF0000',
+            zIndex: 99,
           ),
+          {'id': point.id},
         );
-        _drawnLandslidePoints.add(circle);
+        _drawnLandslidePoints.add(symbol);
       } catch (e) {
         print('Error drawing landslide point: $e');
       }
     }
   }
 
-  Future<void> clearLandslidePointsOnMap() async {
-    for (var circle in _drawnLandslidePoints) {
+    Future<void> ensureLandslidePointsOnTop() async {
+    for (var symbol in _drawnLandslidePoints) {
       try {
-        await _mapController.removeCircle(circle);
+        await _mapController.updateSymbol(
+          symbol,
+          SymbolOptions(zIndex: 99),
+        );
+      } catch (e) {
+        print('Error updating landslide point zIndex: $e');
+      }
+    }
+  }
+
+  Future<void> clearLandslidePointsOnMap() async {
+    for (var symbol in _drawnLandslidePoints) {
+      try {
+        await _mapController.removeSymbol(symbol);
       } catch (e) {
         print('Error removing landslide point: $e');
       }
@@ -228,10 +240,10 @@ class MapUtils {
   }
 
   Future<void> toggleLandslidePointsVisibility(bool isVisible) async {
-    for (var circle in _drawnLandslidePoints) {
+    for (var symbol in _drawnLandslidePoints) {
       try {
-        await _mapController.updateCircle(
-            circle, CircleOptions(circleOpacity: isVisible ? 0.7 : 0.0));
+        await _mapController.updateSymbol(
+            symbol, SymbolOptions(iconOpacity: isVisible ? 1.0 : 0.0));
       } catch (e) {
         print('Error toggling landslide point visibility: $e');
       }

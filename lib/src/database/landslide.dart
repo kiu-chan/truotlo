@@ -8,7 +8,7 @@ class LandslideDatabase {
   LandslideDatabase(this.connection);
 
   Future<List<LandslidePoint>> fetchLandslidePoints() async {
-    final results = await connection!.query('''
+    final results = await connection.query('''
       SELECT 
         id, 
         ST_X(
@@ -25,11 +25,43 @@ class LandslideDatabase {
         ) as lat 
       FROM public.landslide
     ''');
-    
-    return results.map((row) => LandslidePoint.fromJson({
-      'id': row[0] as int,
-      'lon': row[1] as double,
-      'lat': row[2] as double,
-    })).toList();
+
+    return results
+        .map((row) => LandslidePoint.fromJson({
+              'id': row[0] as int,
+              'lon': row[1] as double,
+              'lat': row[2] as double,
+            }))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> fetchLandslideDetail(int id) async {
+    final results = await connection.query('''
+      SELECT 
+        id,
+        lon,
+        lat,
+        commune_id,
+        ten_xa,
+        vi_tri,
+        mo_ta
+      FROM 
+        public.landslide
+      WHERE 
+        id = @id
+    ''', substitutionValues: {'id': id});
+
+    if (results.isNotEmpty) {
+      return {
+        'id': results[0][0],
+        'lon': results[0][1],
+        'lat': results[0][2],
+        'commune_id': results[0][3],
+        'ten_xa': results[0][4],
+        'vi_tri': results[0][5],
+        'mo_ta': results[0][6],
+      };
+    }
+    return {};
   }
 }

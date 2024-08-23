@@ -45,7 +45,8 @@ class DefaultDatabase {
   Future<List<List<LatLng>>> fetchAndParseGeometry() async {
     return await borderDatabase.fetchAndParseGeometry();
   }
-    Future<List<District>> fetchDistrictsData() async {
+
+  Future<List<District>> fetchDistrictsData() async {
     return await districtDatabase.fetchDistrictsData();
   }
 
