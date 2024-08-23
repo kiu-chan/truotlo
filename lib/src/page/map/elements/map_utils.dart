@@ -1,5 +1,4 @@
 import 'package:mapbox_gl/mapbox_gl.dart';
-import 'package:flutter/material.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/database/commune.dart';
@@ -7,10 +6,10 @@ import 'package:truotlo/src/database/commune.dart';
 class MapUtils {
   final MapboxMapController _mapController;
   Circle? _locationCircle;
-  Map<int, List<Fill>> _drawnDistricts = {};
-  List<Line> _drawnPolygons = [];
-  List<Line> _drawnCommunes = [];
-  List<Symbol> _drawnLandslidePoints = [];
+  final Map<int, List<Line>> _drawnDistricts = {};
+  final List<Line> _drawnPolygons = [];
+  final List<Line> _drawnCommunes = [];
+  final List<Symbol> _drawnLandslidePoints = [];
 
   MapUtils(this._mapController);
 
@@ -45,31 +44,31 @@ class MapUtils {
   }
 
   Future<void> drawDistrict(District district) async {
-    List<Fill> fills = [];
+    List<Line> lines = [];
     for (var polygon in district.polygons) {
       try {
-        Fill fill = await _mapController.addFill(
-          FillOptions(
-            geometry: [polygon],
-            fillColor: '#${district.color.value.toRadixString(16).substring(2)}',
-            fillOpacity: 0.5,
-            fillOutlineColor: '#000000',
+        Line line = await _mapController.addLine(
+          LineOptions(
+            geometry: polygon,
+            lineColor: '#00000', // Red color for district boundaries
+            lineWidth: 2.0,
+            lineOpacity: 1.0,
           ),
         );
-        fills.add(fill);
+        lines.add(line);
       } catch (e) {
-        print('Lỗi khi vẽ huyện ${district.name}: $e');
+        print('Lỗi khi vẽ ranh giới huyện ${district.name}: $e');
       }
     }
-    _drawnDistricts[district.id] = fills;
+    _drawnDistricts[district.id] = lines.cast<Line>();
   }
 
   Future<void> toggleDistrictVisibility(int districtId, bool isVisible) async {
     if (_drawnDistricts.containsKey(districtId)) {
-      for (var fill in _drawnDistricts[districtId]!) {
+      for (var line in _drawnDistricts[districtId]!) {
         try {
-          await _mapController.updateFill(
-              fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
+          await _mapController.updateLine(
+              line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của huyện $districtId: $e');
         }
@@ -78,11 +77,11 @@ class MapUtils {
   }
 
   Future<void> toggleAllDistrictsVisibility(bool isVisible) async {
-    for (var fills in _drawnDistricts.values) {
-      for (var fill in fills) {
+    for (var lines in _drawnDistricts.values) {
+      for (var line in lines) {
         try {
-          await _mapController.updateFill(
-              fill, FillOptions(fillOpacity: isVisible ? 0.5 : 0.0));
+          await _mapController.updateLine(
+              line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của tất cả các huyện: $e');
         }
@@ -91,12 +90,12 @@ class MapUtils {
   }
 
   Future<void> clearDistrictsOnMap() async {
-    for (var fills in _drawnDistricts.values) {
-      for (var fill in fills) {
+    for (var lines in _drawnDistricts.values) {
+      for (var line in lines) {
         try {
-          await _mapController.removeFill(fill);
+          await _mapController.removeLine(line);
         } catch (e) {
-          print('Lỗi khi xóa fill của huyện: $e');
+          print('Lỗi khi xóa đường ranh giới của huyện: $e');
         }
       }
     }
@@ -215,12 +214,12 @@ class MapUtils {
     }
   }
 
-    Future<void> ensureLandslidePointsOnTop() async {
+  Future<void> ensureLandslidePointsOnTop() async {
     for (var symbol in _drawnLandslidePoints) {
       try {
         await _mapController.updateSymbol(
           symbol,
-          SymbolOptions(zIndex: 99),
+          const SymbolOptions(zIndex: 99),
         );
       } catch (e) {
         print('Error updating landslide point zIndex: $e');

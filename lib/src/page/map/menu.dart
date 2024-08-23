@@ -19,7 +19,7 @@ class MapMenu extends StatelessWidget {
   final Function(bool?) onLandslidePointsVisibilityChanged;
 
   const MapMenu({
-    Key? key,
+    super.key,
     required this.styleCategories,
     required this.currentStyle,
     required this.isDistrictsVisible,
@@ -34,7 +34,7 @@ class MapMenu extends StatelessWidget {
     required this.onCommunesVisibilityChanged,
     required this.isLandslidePointsVisible,
     required this.onLandslidePointsVisibilityChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -95,11 +95,6 @@ class MapMenu extends StatelessWidget {
                 title: Text(district.name),
                 value: districtVisibility[district.id],
                 onChanged: (bool? value) => onDistrictVisibilityChanged(district.id, value),
-                secondary: Container(
-                  width: 24,
-                  height: 24,
-                  color: district.color,
-                ),
               )).toList(),
             ),
         ],

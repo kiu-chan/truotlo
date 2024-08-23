@@ -1,5 +1,4 @@
 import 'package:postgres/postgres.dart';
-import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 
 class LandslideDatabase {

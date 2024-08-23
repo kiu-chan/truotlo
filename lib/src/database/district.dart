@@ -1,7 +1,5 @@
 import 'package:postgres/postgres.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
-import 'package:flutter/material.dart';
-import 'dart:math';
 
 import 'package:truotlo/src/data/map/district_data.dart';
 
@@ -16,7 +14,6 @@ class DistrictDatabase {
     );
     
     List<District> districts = [];
-    Random random = Random();
     
     for (final row in results) {
       int id = row[0] as int;
@@ -24,15 +21,7 @@ class DistrictDatabase {
       String wktGeometry = row[2] as String;
       List<List<LatLng>> polygons = _parseMultiPolygon(wktGeometry);
       
-      // Tạo màu ngẫu nhiên cho mỗi huyện
-      Color color = Color.fromRGBO(
-        random.nextInt(256),
-        random.nextInt(256),
-        random.nextInt(256),
-        1
-      );
-      
-      districts.add(District(id, name, polygons, color));
+      districts.add(District(id, name, polygons));
     }
     
     return districts;

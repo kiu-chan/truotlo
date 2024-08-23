@@ -13,7 +13,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 
 class MapboxPage extends StatefulWidget {
-  const MapboxPage({Key? key}) : super(key: key);
+  const MapboxPage({super.key});
 
   @override
   MapboxPageState createState() => MapboxPageState();
@@ -33,7 +33,7 @@ class MapboxPageState extends State<MapboxPage> {
   String mapToken = MapConfig().getMapToken();
 
   LatLng? _currentLocation;
-  bool _isDistrictsVisible = false;
+  bool _isDistrictsVisible = true;
   bool _isBorderVisible = false;
   bool _isCommunesVisible = false;
   bool _isLandslidePointsVisible = true;
@@ -159,14 +159,12 @@ class MapboxPageState extends State<MapboxPage> {
     await _mapController.addImage("location_on", list);
 
     await _initializeData();
-    // _onStyleLoaded();
 
     // Add this line to handle symbol taps
     _mapController.onSymbolTapped.add(_onSymbolTapped);
   }
 
   void _onStyleLoaded() async {
-    print(1);
     if (_isDistrictsVisible && _isDistrictsLoaded) {
       await _mapUtils.drawDistrictsOnMap(_districts);
     }
@@ -208,7 +206,7 @@ class MapboxPageState extends State<MapboxPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Thông tin điểm trượt lở'),
+          title: const Text('Thông tin điểm trượt lở'),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
@@ -221,7 +219,7 @@ class MapboxPageState extends State<MapboxPage> {
           ),
           actions: <Widget>[
             TextButton(
-              child: Text('Đóng'),
+              child: const Text('Đóng'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -379,15 +377,15 @@ class MapboxPageState extends State<MapboxPage> {
               bottom: 16,
               left: 16,
               child: Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8)],
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
                 ),
                 child: Text(
                   'Vị trí hiện tại: ${_currentLocation!.latitude.toStringAsFixed(6)}, ${_currentLocation!.longitude.toStringAsFixed(6)}',
-                  style: TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
             ),
@@ -398,14 +396,14 @@ class MapboxPageState extends State<MapboxPage> {
         children: [
           FloatingActionButton(
             onPressed: _moveToCurrentLocation,
-            child: Icon(Icons.my_location),
             heroTag: 'moveToCurrentLocation',
+            child: const Icon(Icons.my_location),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           FloatingActionButton(
             onPressed: _moveToDefaultLocation,
-            child: Icon(Icons.home),
             heroTag: 'moveToDefaultLocation',
+            child: const Icon(Icons.home),
           ),
         ],
       ),

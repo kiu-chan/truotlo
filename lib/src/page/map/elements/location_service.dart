@@ -32,7 +32,7 @@ class LocationService {
 
   void startLocationUpdates(Function(LatLng) onLocationUpdate, Function(dynamic) onError) {
     _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10)
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10)
     ).listen(
       (Position position) {
         onLocationUpdate(LatLng(position.latitude, position.longitude));
@@ -49,15 +49,15 @@ class LocationService {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text('Dịch vụ vị trí bị tắt'),
-        content: Text('Vui lòng bật dịch vụ vị trí để sử dụng tính năng này.'),
+        title: const Text('Dịch vụ vị trí bị tắt'),
+        content: const Text('Vui lòng bật dịch vụ vị trí để sử dụng tính năng này.'),
         actions: <Widget>[
           TextButton(
-            child: Text('Mở cài đặt'),
+            child: const Text('Mở cài đặt'),
             onPressed: () => Geolocator.openLocationSettings(),
           ),
           TextButton(
-            child: Text('Đóng'),
+            child: const Text('Đóng'),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -67,7 +67,7 @@ class LocationService {
 
   void _showPermissionDeniedDialog(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Quyền truy cập vị trí bị từ chối. Một số tính năng có thể không hoạt động.')),
+      const SnackBar(content: Text('Quyền truy cập vị trí bị từ chối. Một số tính năng có thể không hoạt động.')),
     );
   }
 
@@ -75,15 +75,15 @@ class LocationService {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text('Cần quyền truy cập vị trí'),
-        content: Text('Ứng dụng cần quyền truy cập vị trí để hiển thị vị trí của bạn trên bản đồ. Vui lòng cấp quyền trong cài đặt ứng dụng.'),
+        title: const Text('Cần quyền truy cập vị trí'),
+        content: const Text('Ứng dụng cần quyền truy cập vị trí để hiển thị vị trí của bạn trên bản đồ. Vui lòng cấp quyền trong cài đặt ứng dụng.'),
         actions: <Widget>[
           TextButton(
-            child: Text('Mở cài đặt'),
+            child: const Text('Mở cài đặt'),
             onPressed: () => Geolocator.openAppSettings(),
           ),
           TextButton(
-            child: Text('Đóng'),
+            child: const Text('Đóng'),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
