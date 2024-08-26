@@ -37,6 +37,9 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   List<LandslidePoint> landslidePoints = [];
   Map<int, bool> districtVisibility = {};
 
+  bool _isRouteSearching = false;
+  int? _currentSearchId;
+
   bool isDistrictsLoaded = false;
   bool isBorderLoaded = false;
   bool isCommunesLoaded = false;
@@ -232,7 +235,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
                   Text(
                       'Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
                   Text('Mô tả: ${landslideDetail['mo_ta']}'),
-                  Text('Tọa độ: ${landslideDetail['lat']}, ${landslideDetail['lon']}'),
+                  Text(
+                      'Tọa độ: ${landslideDetail['lat']}, ${landslideDetail['lon']}'),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     child: const Text('Khoảng cách theo đường chim bay'),
@@ -260,7 +264,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
                     child: const Text('Tìm đường'),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      _findRoute(landslideLocation);
+                      _findRoute(landslideLocation, landslideDetail['id']);
                     },
                   ),
                 ],
@@ -280,13 +284,20 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     );
   }
 
-  void _findRoute(LatLng destination) async {
+  void _findRoute(LatLng destination, int destinationId) async {
     if (currentLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
       );
       return;
     }
+
+    setState(() {
+      _isRouteSearching = true;
+      _currentSearchId = destinationId;
+    });
+
+    _showSearchingSnackBar(destinationId);
 
     try {
       List<LatLng> routeCoordinates = await _mapUtils.getRouteCoordinates(
@@ -295,11 +306,15 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         mapToken,
       );
 
+      if (_currentSearchId != destinationId) {
+        // Tìm kiếm đã bị hủy
+        return;
+      }
+
       await _mapUtils.drawRouteOnMap(routeCoordinates);
 
-      // Move camera to fit the route
       LatLngBounds bounds = _calculateBounds(routeCoordinates);
-      
+
       mapController.animateCamera(CameraUpdate.newLatLngBounds(
         bounds,
         left: 50,
@@ -308,15 +323,48 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         bottom: 50,
       ));
 
-      // Thêm marker cho điểm đích
       await _mapUtils.addDestinationMarker(destination);
-
     } catch (e) {
       print('Error finding route: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
+        const SnackBar(
+            content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRouteSearching = false;
+          _currentSearchId = null;
+        });
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
     }
+  }
+
+  void _showSearchingSnackBar(int destinationId) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Text('Đang tìm đường đến ($destinationId)'),
+          ],
+        ),
+        duration: const Duration(days: 365), // Snackbar sẽ không tự động đóng
+        action: SnackBarAction(
+          label: 'Hủy',
+          onPressed: () {
+            setState(() {
+              _isRouteSearching = false;
+              _currentSearchId = null;
+            });
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            _mapUtils.clearRoute();
+          },
+        ),
+      ),
+    );
   }
 
   LatLngBounds _calculateBounds(List<LatLng> coordinates) {

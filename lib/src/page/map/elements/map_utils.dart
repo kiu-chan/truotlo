@@ -7,12 +7,13 @@ import 'dart:convert';
 
 class MapUtils {
   final MapboxMapController _mapController;
+  Line? _routeLine;
+  Symbol? _destinationMarker;
   Circle? _locationCircle;
   final Map<int, List<Line>> _drawnDistricts = {};
   final List<Line> _drawnPolygons = [];
   final List<Line> _drawnCommunes = [];
   final List<Symbol> _drawnLandslidePoints = [];
-  Line? _routeLine;
 
   MapUtils(this._mapController);
 
@@ -266,10 +267,7 @@ class MapUtils {
   }
 
   Future<void> drawRouteOnMap(List<LatLng> routeCoordinates) async {
-    // Remove existing route if any
-    if (_routeLine != null) {
-      await _mapController.removeLine(_routeLine!);
-    }
+    await clearRoute(); // Clear existing route before drawing a new one
 
     _routeLine = await _mapController.addLine(
       LineOptions(
@@ -286,9 +284,20 @@ class MapUtils {
     await _mapController.addSymbol(
       SymbolOptions(
         geometry: destination,
-        iconImage: 'lib/assets/location_icon.png', // Đảm bảo bạn có icon này trong assets
+        iconImage: 'marker-15', // Sử dụng icon mặc định của Mapbox
         iconSize: 1.5,
       ),
     );
+  }
+
+    Future<void> clearRoute() async {
+    if (_routeLine != null) {
+      await _mapController.removeLine(_routeLine!);
+      _routeLine = null;
+    }
+    if (_destinationMarker != null) {
+      await _mapController.removeSymbol(_destinationMarker!);
+      _destinationMarker = null;
+    }
   }
 }
