@@ -37,17 +37,23 @@ class LandslideDatabase {
   Future<Map<String, dynamic>> fetchLandslideDetail(int id) async {
     final results = await connection.query('''
       SELECT 
-        id,
-        lon,
-        lat,
-        commune_id,
-        ten_xa,
-        vi_tri,
-        mo_ta
+        l.id,
+        l.lon,
+        l.lat,
+        l.commune_id,
+        l.ten_xa,
+        l.vi_tri,
+        l.mo_ta,
+        d.ten_huyen AS district_name,
+        x.ten_xa AS commune_name
       FROM 
-        public.landslide
+        public.landslide l
+      LEFT JOIN 
+        public.districts d ON ST_Contains(d.geom, l.geom)
+      LEFT JOIN 
+        public.xa x ON l.commune_id = x.id
       WHERE 
-        id = @id
+        l.id = @id
     ''', substitutionValues: {'id': id});
 
     if (results.isNotEmpty) {
@@ -59,6 +65,8 @@ class LandslideDatabase {
         'ten_xa': results[0][4],
         'vi_tri': results[0][5],
         'mo_ta': results[0][6],
+        'district_name': results[0][7],
+        'commune_name': results[0][8],
       };
     }
     return {};
