@@ -14,6 +14,8 @@ class MapUtils {
   final List<Line> _drawnPolygons = [];
   final List<Line> _drawnCommunes = [];
   final List<Symbol> _drawnLandslidePoints = [];
+  Symbol? _originalMarker;
+  SymbolOptions? _originalMarkerOptions;
 
   MapUtils(this._mapController);
 
@@ -267,7 +269,9 @@ class MapUtils {
   }
 
   Future<void> drawRouteOnMap(List<LatLng> routeCoordinates) async {
-    await clearRoute(); // Clear existing route before drawing a new one
+    if (_routeLine != null) {
+      await _mapController.removeLine(_routeLine!);
+    }
 
     _routeLine = await _mapController.addLine(
       LineOptions(
@@ -275,29 +279,42 @@ class MapUtils {
         lineColor: "#3bb2d0",
         lineWidth: 5.0,
         lineOpacity: 0.8,
-        draggable: false,
       ),
     );
   }
-
   Future<void> addDestinationMarker(LatLng destination) async {
-    await _mapController.addSymbol(
+    if (_destinationMarker != null) {
+      await _mapController.removeSymbol(_destinationMarker!);
+    }
+    
+    // Lưu trạng thái icon ban đầu nếu có
+    if (_originalMarker == null) {
+      Set<Symbol> symbols = await _mapController.symbols;
+      if (symbols.isNotEmpty) {
+        _originalMarker = symbols.first;
+        _originalMarkerOptions = _originalMarker!.options;
+      }
+    }
+
+    // Thêm marker mới cho điểm đến
+    _destinationMarker = await _mapController.addSymbol(
       SymbolOptions(
         geometry: destination,
-        iconImage: 'marker-15', // Sử dụng icon mặc định của Mapbox
-        iconSize: 1.5,
+        iconImage: 'lib/assets/landslide.png',
+        iconSize: 0.15,
       ),
     );
+
+    // Ẩn marker ban đầu
+    if (_originalMarker != null) {
+      await _mapController.updateSymbol(_originalMarker!, const SymbolOptions(iconOpacity: 0));
+    }
   }
 
-    Future<void> clearRoute() async {
+  Future<void> clearRoute() async {
     if (_routeLine != null) {
       await _mapController.removeLine(_routeLine!);
       _routeLine = null;
-    }
-    if (_destinationMarker != null) {
-      await _mapController.removeSymbol(_destinationMarker!);
-      _destinationMarker = null;
     }
   }
 }

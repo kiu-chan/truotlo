@@ -53,6 +53,7 @@ class MapboxPageState extends State<MapboxPage> with MapState {
             onStyleLoadedCallback: onStyleLoaded,
             onMapCreated: onMapCreated,
           ),
+          buildRouteInfo(),
           if (currentLocation != null)
             Positioned(
               bottom: 16,

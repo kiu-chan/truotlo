@@ -40,6 +40,10 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   bool _isRouteSearching = false;
   int? _currentSearchId;
 
+
+  bool _isRouteDisplayed = false;
+  int? _currentRouteId;
+
   bool isDistrictsLoaded = false;
   bool isBorderLoaded = false;
   bool isCommunesLoaded = false;
@@ -314,21 +318,18 @@ mixin MapState<T extends StatefulWidget> on State<T> {
       await _mapUtils.drawRouteOnMap(routeCoordinates);
 
       LatLngBounds bounds = _calculateBounds(routeCoordinates);
+      
+      mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds));
 
-      mapController.animateCamera(CameraUpdate.newLatLngBounds(
-        bounds,
-        left: 50,
-        top: 50,
-        right: 50,
-        bottom: 50,
-      ));
+      setState(() {
+        _isRouteDisplayed = true;
+        _currentRouteId = destinationId;
+      });
 
-      await _mapUtils.addDestinationMarker(destination);
     } catch (e) {
       print('Error finding route: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
+        const SnackBar(content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
       );
     } finally {
       if (mounted) {
@@ -339,6 +340,40 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
     }
+  }
+
+  void _cancelRouteDisplay() {
+    _mapUtils.clearRoute();
+    setState(() {
+      _isRouteDisplayed = false;
+      _currentRouteId = null;
+    });
+  }
+
+  Widget buildRouteInfo() {
+    if (!_isRouteDisplayed) return const SizedBox.shrink();
+    
+    return Positioned(
+      top: 16,
+      left: 16,
+      right: 16,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text('Đường đi tới (${_currentRouteId})'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _cancelRouteDisplay,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showSearchingSnackBar(int destinationId) {
@@ -503,6 +538,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
+
 
   @override
   void dispose() {
