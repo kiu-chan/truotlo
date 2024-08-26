@@ -28,10 +28,9 @@ class MapUtils {
 
     try {
       if (_locationCircle != null) {
-        await _mapController.updateCircle(_locationCircle!, circleOptions);
-      } else {
-        _locationCircle = await _mapController.addCircle(circleOptions);
+        await _mapController.removeCircle(_locationCircle!);
       }
+      _locationCircle = await _mapController.addCircle(circleOptions);
     } catch (e) {
       print('Lỗi khi cập nhật vòng tròn vị trí: $e');
     }
@@ -201,7 +200,7 @@ class MapUtils {
           SymbolOptions(
             geometry: point.location,
             iconImage: 'location_on',
-            iconSize: 1.0,
+            iconSize: 0.15, // Điều chỉnh kích thước biểu tượng ở đây
             iconColor: '#FF0000',
             zIndex: 99,
           ),

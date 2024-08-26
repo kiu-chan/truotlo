@@ -17,7 +17,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   String currentStyle = MapboxStyles.MAPBOX_STREETS;
   late MapboxMapController mapController;
   late MapUtils _mapUtils;
-  final List<MapStyleCategory> styleCategories = MapConfig().getStyleCategories();
+  final List<MapStyleCategory> styleCategories =
+      MapConfig().getStyleCategories();
   final DefaultDatabase database = DefaultDatabase();
   final LocationService locationService = LocationService();
 
@@ -79,8 +80,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu huyện: $e');
-        showErrorSnackBar(
-            'Không thể tải dữ liệu huyện. Vui lòng thử lại sau.');
+        showErrorSnackBar('Không thể tải dữ liệu huyện. Vui lòng thử lại sau.');
       }
     }
   }
@@ -89,8 +89,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   Future<void> _fetchBorderPolygons() async {
     if (database.connection != null && !isBorderLoaded) {
       try {
-        borderPolygons =
-            await database.borderDatabase.fetchAndParseGeometry();
+        borderPolygons = await database.borderDatabase.fetchAndParseGeometry();
         isBorderLoaded = true;
         setState(() {});
         if (_isMapInitialized) {
@@ -145,8 +144,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     _mapUtils = MapUtils(mapController);
     _isMapInitialized = true;
 
-    final ByteData bytes =
-        await rootBundle.load('lib/assets/location_icon.png');
+    final ByteData bytes = await rootBundle.load('lib/assets/landslide.png');
     final Uint8List list = bytes.buffer.asUint8List();
     await mapController.addImage("location_on", list);
 
@@ -179,7 +177,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     await _mapUtils.toggleLandslidePointsVisibility(isLandslidePointsVisible);
 
     if (currentLocation != null) {
-      _mapUtils.updateLocationOnMap(currentLocation!);
+      await _mapUtils.updateLocationOnMap(currentLocation!);
     }
   }
 
@@ -196,73 +194,83 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   double _calculateDistance(LatLng start, LatLng end) {
     var p = 0.017453292519943295;
     var c = cos;
-    var a = 0.5 - c((end.latitude - start.latitude) * p)/2 + 
-            c(start.latitude * p) * c(end.latitude * p) * 
-            (1 - c((end.longitude - start.longitude) * p))/2;
+    var a = 0.5 -
+        c((end.latitude - start.latitude) * p) / 2 +
+        c(start.latitude * p) *
+            c(end.latitude * p) *
+            (1 - c((end.longitude - start.longitude) * p)) /
+            2;
     return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
   // Phương thức hiển thị hộp thoại chi tiết điểm trượt lở
   void showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
-  LatLng landslideLocation;
-  try {
-    landslideLocation = LatLng(
-      double.parse(landslideDetail['lat'].toString()),
-      double.parse(landslideDetail['lon'].toString())
-    );
-  } catch (e) {
-    print('Error parsing coordinates: $e');
-    // Xử lý lỗi ở đây, có thể là hiển thị một thông báo lỗi
-    return;
-  }
+    LatLng landslideLocation;
+    try {
+      landslideLocation = LatLng(
+          double.parse(landslideDetail['lat'].toString()),
+          double.parse(landslideDetail['lon'].toString()));
+    } catch (e) {
+      print('Error parsing coordinates: $e');
+      // Xử lý lỗi ở đây, có thể là hiển thị một thông báo lỗi
+      return;
+    }
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Thông tin điểm trượt lở'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    Text('ID: ${landslideDetail['id']}'),
-                    Text('Vị trí: ${landslideDetail['vi_tri']}'),
-                    Text('Xã: ${landslideDetail['commune_name'] ?? landslideDetail['ten_xa'] ?? 'Không có thông tin'}'),
-                    Text('Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
-                    Text('Mô tả: ${landslideDetail['mo_ta']}'),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      child: const Text('Khoảng các theo đường chim bay'),
-                      onPressed: () {
-                        if (currentLocation != null) {
-                          double distance = _calculateDistance(currentLocation!, landslideLocation);
-                          setState(() {
-                            landslideDetail['distance'] = distance;
-                          });
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
-                          );
-                        }
-                      },
-                    ),
-                    if (landslideDetail.containsKey('distance'))
-                      Text('Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(2)} km'),
-                  ],
-                ),
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Thông tin điểm trượt lở'),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  Text('ID: ${landslideDetail['id']}'),
+                  Text('Vị trí: ${landslideDetail['vi_tri']}'),
+                  Text(
+                      'Xã: ${landslideDetail['commune_name'] ?? landslideDetail['ten_xa'] ?? 'Không có thông tin'}'),
+                  Text(
+                      'Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
+                  Text('Mô tả: ${landslideDetail['mo_ta']}'),
+                  Text('Mô tả: ' +
+                      (landslideDetail['lat'] +
+                      ', ' +
+                      landslideDetail['lon'])),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    child: const Text('Khoảng cách theo đường chim bay'),
+                    onPressed: () {
+                      if (currentLocation != null) {
+                        double distance = _calculateDistance(
+                            currentLocation!, landslideLocation);
+                        setState(() {
+                          landslideDetail['distance'] = distance;
+                        });
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Không thể xác định vị trí hiện tại')),
+                        );
+                      }
+                    },
+                  ),
+                  if (landslideDetail.containsKey('distance'))
+                    Text(
+                        'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(5)} km'),
+                ],
               ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('Đóng'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          }
-        );
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Đóng'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        });
       },
     );
   }

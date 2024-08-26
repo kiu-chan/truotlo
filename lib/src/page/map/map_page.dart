@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
-import 'package:truotlo/src/data/map/district_data.dart';
-import 'package:truotlo/src/data/map/map_data.dart';
-import 'package:truotlo/src/config/map.dart';
-import 'package:truotlo/src/database/database.dart';
-import 'package:truotlo/src/database/commune.dart';
-import 'package:truotlo/src/data/map/landslide_point.dart';
-import 'elements/map_utils.dart';
-import 'elements/location_service.dart';
 import 'menu.dart';
-import 'dart:typed_data';
-import 'package:flutter/services.dart' show rootBundle;
 import 'map_state.dart';
 
 class MapboxPage extends StatefulWidget {

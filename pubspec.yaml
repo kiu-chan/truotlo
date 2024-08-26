@@ -68,6 +68,7 @@ flutter:
   assets:
     - lib/assets/clouds/
     - lib/assets/location_icon.png
+    - lib/assets/landslide.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
