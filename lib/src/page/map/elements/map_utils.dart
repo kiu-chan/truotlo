@@ -15,7 +15,6 @@ class MapUtils {
   final List<Line> _drawnCommunes = [];
   final List<Symbol> _drawnLandslidePoints = [];
   Symbol? _originalMarker;
-  SymbolOptions? _originalMarkerOptions;
 
   MapUtils(this._mapController);
 
@@ -289,10 +288,9 @@ class MapUtils {
     
     // Lưu trạng thái icon ban đầu nếu có
     if (_originalMarker == null) {
-      Set<Symbol> symbols = await _mapController.symbols;
+      Set<Symbol> symbols = _mapController.symbols;
       if (symbols.isNotEmpty) {
         _originalMarker = symbols.first;
-        _originalMarkerOptions = _originalMarker!.options;
       }
     }
 

@@ -41,6 +41,7 @@ dependencies:
   mapbox_gl: ^0.16.0
   postgres: ^2.5.0
   geolocator: ^9.0.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

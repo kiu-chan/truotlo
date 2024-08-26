@@ -6,6 +6,7 @@ import 'package:truotlo/src/config/map.dart';
 import 'package:truotlo/src/database/database.dart';
 import 'package:truotlo/src/database/commune.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'elements/map_utils.dart';
 import 'elements/location_service.dart';
 import 'dart:typed_data';
@@ -37,9 +38,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   List<LandslidePoint> landslidePoints = [];
   Map<int, bool> districtVisibility = {};
 
-  bool _isRouteSearching = false;
   int? _currentSearchId;
-
 
   bool _isRouteDisplayed = false;
   int? _currentRouteId;
@@ -265,11 +264,16 @@ mixin MapState<T extends StatefulWidget> on State<T> {
                         'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(2)} km'),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    child: const Text('Tìm đường'),
+                    child: const Text('Tìm đường trực tiếp'),
                     onPressed: () {
                       Navigator.of(context).pop();
                       _findRoute(landslideLocation, landslideDetail['id']);
                     },
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    label: const Text('Mở trong Google Maps'),
+                    onPressed: () => _openGoogleMaps(landslideLocation),
                   ),
                 ],
               ),
@@ -297,7 +301,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
 
     setState(() {
-      _isRouteSearching = true;
+      _isRouteDisplayed = true;
+      _currentRouteId = destinationId;
       _currentSearchId = destinationId;
     });
 
@@ -318,27 +323,48 @@ mixin MapState<T extends StatefulWidget> on State<T> {
       await _mapUtils.drawRouteOnMap(routeCoordinates);
 
       LatLngBounds bounds = _calculateBounds(routeCoordinates);
-      
+
       mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds));
 
       setState(() {
         _isRouteDisplayed = true;
         _currentRouteId = destinationId;
       });
-
     } catch (e) {
       print('Error finding route: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
+        const SnackBar(
+            content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
       );
     } finally {
       if (mounted) {
         setState(() {
-          _isRouteSearching = false;
           _currentSearchId = null;
         });
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
+    }
+  }
+
+  void _openGoogleMaps(LatLng destination) async {
+    if (currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
+      );
+      return;
+    }
+
+    final url =
+        'https://www.google.com/maps/dir/?api=1&origin=${currentLocation!.latitude},${currentLocation!.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
+
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Không thể mở Google Maps. Vui lòng cài đặt ứng dụng Google Maps.')),
+      );
     }
   }
 
@@ -352,7 +378,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
 
   Widget buildRouteInfo() {
     if (!_isRouteDisplayed) return const SizedBox.shrink();
-    
+
     return Positioned(
       top: 16,
       left: 16,
@@ -363,7 +389,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
           child: Row(
             children: [
               Expanded(
-                child: Text('Đường đi tới (${_currentRouteId})'),
+                child: Text('Đường đi tới ($_currentRouteId)'),
               ),
               IconButton(
                 icon: const Icon(Icons.close),
@@ -391,7 +417,6 @@ mixin MapState<T extends StatefulWidget> on State<T> {
           label: 'Hủy',
           onPressed: () {
             setState(() {
-              _isRouteSearching = false;
               _currentSearchId = null;
             });
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -538,7 +563,6 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
-
 
   @override
   void dispose() {
