@@ -2,6 +2,8 @@ import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/database/commune.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MapUtils {
   final MapboxMapController _mapController;
@@ -10,6 +12,7 @@ class MapUtils {
   final List<Line> _drawnPolygons = [];
   final List<Line> _drawnCommunes = [];
   final List<Symbol> _drawnLandslidePoints = [];
+  Line? _routeLine;
 
   MapUtils(this._mapController);
 
@@ -200,7 +203,7 @@ class MapUtils {
           SymbolOptions(
             geometry: point.location,
             iconImage: 'location_on',
-            iconSize: 0.15, // Điều chỉnh kích thước biểu tượng ở đây
+            iconSize: 0.15,
             iconColor: '#FF0000',
             zIndex: 99,
           ),
@@ -246,5 +249,46 @@ class MapUtils {
         print('Error toggling landslide point visibility: $e');
       }
     }
+  }
+
+  Future<List<LatLng>> getRouteCoordinates(LatLng start, LatLng end, String accessToken) async {
+    final String url = 'https://api.mapbox.com/directions/v5/mapbox/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?geometries=geojson&steps=true&overview=full&access_token=$accessToken';
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final decodedBody = json.decode(response.body);
+      final route = decodedBody['routes'][0]['geometry']['coordinates'] as List;
+      return route.map((e) => LatLng(e[1] as double, e[0] as double)).toList();
+    } else {
+      throw Exception('Failed to load route');
+    }
+  }
+
+  Future<void> drawRouteOnMap(List<LatLng> routeCoordinates) async {
+    // Remove existing route if any
+    if (_routeLine != null) {
+      await _mapController.removeLine(_routeLine!);
+    }
+
+    _routeLine = await _mapController.addLine(
+      LineOptions(
+        geometry: routeCoordinates,
+        lineColor: "#3bb2d0",
+        lineWidth: 5.0,
+        lineOpacity: 0.8,
+        draggable: false,
+      ),
+    );
+  }
+
+  Future<void> addDestinationMarker(LatLng destination) async {
+    await _mapController.addSymbol(
+      SymbolOptions(
+        geometry: destination,
+        iconImage: 'lib/assets/location_icon.png', // Đảm bảo bạn có icon này trong assets
+        iconSize: 1.5,
+      ),
+    );
   }
 }

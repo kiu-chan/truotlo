@@ -212,7 +212,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
           double.parse(landslideDetail['lon'].toString()));
     } catch (e) {
       print('Error parsing coordinates: $e');
-      // Xử lý lỗi ở đây, có thể là hiển thị một thông báo lỗi
+      showErrorSnackBar('Lỗi khi xử lý tọa độ điểm trượt lở.');
       return;
     }
 
@@ -232,10 +232,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
                   Text(
                       'Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
                   Text('Mô tả: ${landslideDetail['mo_ta']}'),
-                  Text('Mô tả: ' +
-                      (landslideDetail['lat'] +
-                      ', ' +
-                      landslideDetail['lon'])),
+                  Text('Tọa độ: ${landslideDetail['lat']}, ${landslideDetail['lon']}'),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     child: const Text('Khoảng cách theo đường chim bay'),
@@ -257,7 +254,15 @@ mixin MapState<T extends StatefulWidget> on State<T> {
                   ),
                   if (landslideDetail.containsKey('distance'))
                     Text(
-                        'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(5)} km'),
+                        'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(2)} km'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    child: const Text('Tìm đường'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _findRoute(landslideLocation);
+                    },
+                  ),
                 ],
               ),
             ),
@@ -272,6 +277,64 @@ mixin MapState<T extends StatefulWidget> on State<T> {
           );
         });
       },
+    );
+  }
+
+  void _findRoute(LatLng destination) async {
+    if (currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
+      );
+      return;
+    }
+
+    try {
+      List<LatLng> routeCoordinates = await _mapUtils.getRouteCoordinates(
+        currentLocation!,
+        destination,
+        mapToken,
+      );
+
+      await _mapUtils.drawRouteOnMap(routeCoordinates);
+
+      // Move camera to fit the route
+      LatLngBounds bounds = _calculateBounds(routeCoordinates);
+      
+      mapController.animateCamera(CameraUpdate.newLatLngBounds(
+        bounds,
+        left: 50,
+        top: 50,
+        right: 50,
+        bottom: 50,
+      ));
+
+      // Thêm marker cho điểm đích
+      await _mapUtils.addDestinationMarker(destination);
+
+    } catch (e) {
+      print('Error finding route: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
+      );
+    }
+  }
+
+  LatLngBounds _calculateBounds(List<LatLng> coordinates) {
+    double minLat = coordinates[0].latitude;
+    double maxLat = coordinates[0].latitude;
+    double minLng = coordinates[0].longitude;
+    double maxLng = coordinates[0].longitude;
+
+    for (LatLng coord in coordinates) {
+      if (coord.latitude < minLat) minLat = coord.latitude;
+      if (coord.latitude > maxLat) maxLat = coord.latitude;
+      if (coord.longitude < minLng) minLng = coord.longitude;
+      if (coord.longitude > maxLng) maxLng = coord.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
     );
   }
 
@@ -303,7 +366,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
   }
 
-  // Phương thức chuyển đổi hiển thị các xã
+// Phương thức chuyển đổi hiển thị các xã
   void toggleCommunesVisibility(bool? value) async {
     if (value != null) {
       setState(() {
@@ -391,5 +454,13 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   void showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  void dispose() {
+    locationService.stopLocationUpdates();
+    database.connection?.close();
+    mapController.onSymbolTapped.remove(onSymbolTapped);
+    super.dispose();
   }
 }
