@@ -346,27 +346,29 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
   }
 
-  void _openGoogleMaps(LatLng destination) async {
-    if (currentLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
-      );
-      return;
-    }
-
-    final url =
-        'https://www.google.com/maps/dir/?api=1&origin=${currentLocation!.latitude},${currentLocation!.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
-
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Không thể mở Google Maps. Vui lòng cài đặt ứng dụng Google Maps.')),
-      );
-    }
+void _openGoogleMaps(LatLng destination) async {
+  if (currentLocation == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
+    );
+    return;
   }
+
+  final url =
+      'https://www.google.com/maps/dir/?api=1&origin=${currentLocation!.latitude},${currentLocation!.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
+
+  final uri = Uri.parse(url);
+
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri);
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text(
+              'Không thể mở Google Maps. Vui lòng cài đặt ứng dụng Google Maps.')),
+    );
+  }
+}
 
   void _cancelRouteDisplay() {
     _mapUtils.clearRoute();

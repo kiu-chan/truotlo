@@ -1,20 +1,7 @@
-class Ward {
-  final String name;
-  final double latitude;
-  final double longitude;
+import 'package:truotlo/src/data/weather/weather_district.dart';
 
-  Ward(this.name, this.latitude, this.longitude);
-}
-
-class District {
-  final String name;
-  final List<Ward> wards;
-
-  District(this.name, this.wards);
-}
-
-final List<District> districts = [
-  District('Thành phố Quy Nhơn', [
+final List<WeatherDistrict> districts = [
+  WeatherDistrict('Thành phố Quy Nhơn', [
     Ward('Bùi Thị Xuân', 13.7293612, 109.1642031), 
     Ward('Đống Đa', 13.7895004, 109.2153207),
     Ward('Ghềnh Ráng', 13.7145131, 109.2075091),
@@ -36,7 +23,7 @@ final List<District> districts = [
     Ward('Trần Phú', 13.7668611, 109.2260013),
     Ward('Trần Quang Diệu', 13.7851714, 109.1509463),
   ]),
-  District('Huyện An Lão', [
+  WeatherDistrict('Huyện An Lão', [
     Ward('An Dũng', 14.6534268, 108.8067322),
     Ward('An Hòa', 14.5494978, 108.9123884),  
     Ward('An Hưng', 14.6535056, 108.9255550),
@@ -48,7 +35,7 @@ final List<District> districts = [
     Ward('An Vinh', 14.5817925, 108.7841804),
     Ward('Xã An Lão', 14.6042037, 108.8810878),
   ]),
-  District('Huyện Hoài Ân', [
+  WeatherDistrict('Huyện Hoài Ân', [
     Ward('Ân Đức', 14.3540807, 108.9416396),
     Ward('Ân Hảo Đông', 14.4956679, 108.9325807),
     Ward('Ân Hảo Tây', 14.4772472, 108.9001366),    
@@ -64,7 +51,7 @@ final List<District> districts = [
     Ward('Dak Mang', 14.4043073, 108.8228431),  
     Ward('Tăng Bạt Hổ', 14.3724464, 108.9714566),
   ]),
-  District('Thị xã Hoài Nhơn', [    
+  WeatherDistrict('Thị xã Hoài Nhơn', [    
     Ward('Bồng Sơn', 14.4359963, 108.9949019),
     Ward('Hoài Châu', 14.5797225, 108.9983755),    
     Ward('Hoài Châu Bắc', 14.5975484, 109.0146372),
@@ -82,7 +69,7 @@ final List<District> districts = [
     Ward('Tam Quan Bắc', 14.5732595, 109.0585081),
     Ward('Tam Quan Nam', 14.5356103, 109.0642166),
   ]),
-  District('Huyện Phù Cát', [
+  WeatherDistrict('Huyện Phù Cát', [
     Ward('Cát Chánh', 13.9217531, 109.2318556),
     Ward('Cát Hanh', 14.0615169, 109.0409391),
     Ward('Cát Hải', 14.0156383, 109.2265720),
@@ -102,7 +89,7 @@ final List<District> districts = [
     Ward('Cát Tường', 13.9826210, 109.1114756),
     Ward('Ngô Mây', 13.9989216, 109.0484058),
   ]),
-  District('Huyện Phù Mỹ', [
+  WeatherDistrict('Huyện Phù Mỹ', [
     Ward('Bình Dương', 14.2942752, 109.0827243),  
     Ward('Mỹ An', 14.2639348, 109.1627669),  
     Ward('Mỹ Cát', 14.1391631, 109.1343651),
@@ -123,7 +110,7 @@ final List<District> districts = [
     Ward('Mỹ Trinh', 14.2301394, 109.0454538),  
     Ward('Phù Mỹ', 14.1842310, 109.0525554),
   ]),  
-  District('Huyện Tây Sơn', [
+  WeatherDistrict('Huyện Tây Sơn', [
     Ward('Bình An', 14.0320129, 108.9068254),
     Ward('Bình Hòa', 13.9245671, 108.9655961),
     Ward('Bình Nghi', 13.8661719, 108.9806483),  
@@ -140,7 +127,7 @@ final List<District> districts = [
     Ward('Tây Xuân', 13.8665831, 108.9346077),
     Ward('Vĩnh An', 13.8463971, 108.8170352),
   ]),
-  District('Huyện Vân Canh', [
+  WeatherDistrict('Huyện Vân Canh', [
     Ward('Canh Hiển', 13.6596956, 109.0442514),  
     Ward('Canh Hiệp', 13.6562400, 109.0326224), 
     Ward('Canh Hòa', 13.5465342, 108.9915763),
@@ -149,7 +136,7 @@ final List<District> districts = [
     Ward('Canh Vinh', 13.7262544, 109.0541138),
     Ward('Thị trấn Vân Canh', 13.6295202, 108.9914468),
   ]),
-  District('Huyện Vĩnh Thạnh', [
+  WeatherDistrict('Huyện Vĩnh Thạnh', [
     Ward('Vĩnh An', 14.3556, 108.7814),
     Ward('Vĩnh Hảo', 14.1842923, 108.7240482),
     Ward('Vĩnh Hiệp', 14.1672801, 108.8041714),  
@@ -161,7 +148,7 @@ final List<District> districts = [
     Ward('Vĩnh Thịnh', 14.0966209, 108.8320084),
     Ward('Vĩnh Thuận', 14.0868663, 108.7374000),  
   ]),
-  District('Thị xã An Nhơn', [
+  WeatherDistrict('Thị xã An Nhơn', [
     Ward('Bình Định', 13.8848274, 109.1096294),
     Ward('Đập Đá', 13.9290071, 109.0877468),
     Ward('Nhơn An', 13.9168937, 109.1196684),
@@ -178,7 +165,7 @@ final List<District> districts = [
     Ward('Nhơn Thành', 13.9435202, 109.0904077),
     Ward('Nhơn Thọ', 13.8309209, 109.0558169),
   ]),
-  District('Thị xã Tuy Phước', [
+  WeatherDistrict('Thị xã Tuy Phước', [
     Ward('Diêu Trì', 13.8109329, 109.1534943),
     Ward('Phước An', 13.8132928, 109.1089013),  
     Ward('Phước Hiệp', 13.8701789, 109.1642380),
