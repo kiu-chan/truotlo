@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class SendRequestPage extends StatefulWidget {
-  const SendRequestPage({Key? key}) : super(key: key);
+  const SendRequestPage({super.key});
 
   @override
-  _SendRequestPageState createState() => _SendRequestPageState();
+  SendRequestPageState createState() => SendRequestPageState();
 }
 
-class _SendRequestPageState extends State<SendRequestPage> {
+class SendRequestPageState extends State<SendRequestPage> {
   final _formKey = GlobalKey<FormState>();
   String _fullName = '';
   String _email = '';
@@ -103,7 +103,6 @@ class _SendRequestPageState extends State<SendRequestPage> {
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
-                      // TODO: Implement send request logic
                       print('Full Name: $_fullName, Email: $_email, Phone: $_phoneNumber, Content: $_content');
                       // You can add a confirmation dialog or navigate back to the previous screen here
                       ScaffoldMessenger.of(context).showSnackBar(

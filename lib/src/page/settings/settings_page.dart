@@ -5,7 +5,7 @@ import 'package:truotlo/src/page/settings/information_page.dart';
 import 'package:truotlo/src/page/settings/send_request_page.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,6 @@ class SettingsPage extends StatelessWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () {
-                    // TODO: Implement edit functionality
                   },
                 ),
               ),
