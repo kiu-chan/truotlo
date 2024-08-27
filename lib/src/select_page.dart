@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:truotlo/src/page/home/home_page.dart';
 import 'package:truotlo/src/page/chart/chart_page.dart';
 import 'package:truotlo/src/page/map/map_page.dart';
+import 'package:truotlo/src/page/mangage/manage_page.dart';
 
 class SelectPage extends StatefulWidget {
   const SelectPage({super.key});
@@ -23,7 +24,7 @@ class SelectPageState extends State<SelectPage> {
     List<Widget> pages = [
       const HomePage(),
       const MapboxPage(),
-      const Placeholder(), // Forecast page placeholder
+      const ManagePage(), // Forecast page placeholder
       const ChartPage(),
       const Placeholder(), // Settings page placeholder
     ];
@@ -51,8 +52,8 @@ class SelectPageState extends State<SelectPage> {
               BottomNavigationBarItem(
                   icon: Icon(Icons.map_outlined), label: 'Map'),
               BottomNavigationBarItem(
-                icon: Icon((Icons.cloud_queue)),
-                label: "Forecast",
+                icon: Icon((Icons.manage_accounts)),
+                label: "Manage",
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.ssid_chart),
