@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class LandslideForecastCard extends StatefulWidget {
-  const LandslideForecastCard({Key? key}) : super(key: key);
+  const LandslideForecastCard({super.key});
 
   @override
-  _LandslideForecastCardState createState() => _LandslideForecastCardState();
+  LandslideForecastCardState createState() => LandslideForecastCardState();
 }
 
-class _LandslideForecastCardState extends State<LandslideForecastCard> {
+class LandslideForecastCardState extends State<LandslideForecastCard> {
   bool _showHourlyForecast = true; // Mặc định hiển thị dự báo theo giờ
 
   @override
@@ -25,7 +25,7 @@ class _LandslideForecastCardState extends State<LandslideForecastCard> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            Text('Cập nhật lúc: 10:00 27/08/2024'),
+            const Text('Cập nhật lúc: 10:00 27/08/2024'),
             const SizedBox(height: 16),
             _buildToggleButtons(),
             const SizedBox(height: 16),
