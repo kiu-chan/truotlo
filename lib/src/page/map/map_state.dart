@@ -171,6 +171,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
       await _mapUtils.drawCommunesOnMap(communes);
     }
     if (isLandslidePointsVisible && isLandslidePointsLoaded) {
+      await _mapUtils.clearLandslidePointsOnMap();
       await _mapUtils.drawLandslidePointsOnMap(landslidePoints);
     }
 
@@ -517,14 +518,20 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   }
 
   // Phương thức thay đổi style bản đồ
-  void changeMapStyle(String? style) {
-    if (style != null) {
-      setState(() {
-        currentStyle = style;
+void changeMapStyle(String? style) {
+  if (style != null) {
+    setState(() {
+      currentStyle = style;
+    });
+    // Vẽ lại các điểm trượt lở sau khi thay đổi style
+    if (isLandslidePointsVisible && isLandslidePointsLoaded) {
+      _mapUtils.clearLandslidePointsOnMap().then((_) {
+        _mapUtils.drawLandslidePointsOnMap(landslidePoints);
       });
-      Navigator.pop(context);
     }
+    Navigator.pop(context);
   }
+}
 
   // Phương thức di chuyển đến vị trí hiện tại
   void moveToCurrentLocation() {

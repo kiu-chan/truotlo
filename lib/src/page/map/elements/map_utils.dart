@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:flutter/services.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
@@ -196,27 +199,36 @@ class MapUtils {
     }
   }
 
-  Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
-    await clearLandslidePointsOnMap();
+Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
+  await clearLandslidePointsOnMap();
 
-    for (var point in points) {
-      try {
-        Symbol symbol = await _mapController.addSymbol(
-          SymbolOptions(
-            geometry: point.location,
-            iconImage: 'location_on',
-            iconSize: 0.15,
-            iconColor: '#FF0000',
-            zIndex: 99,
-          ),
-          {'id': point.id},
-        );
-        _drawnLandslidePoints.add(symbol);
-      } catch (e) {
-        print('Error drawing landslide point: $e');
-      }
+  // Đảm bảo hình ảnh đã được thêm vào bản đồ
+  await _mapController.addImage("location_on", await _loadImageFromAsset('lib/assets/landslide.png'));
+
+  for (var point in points) {
+    try {
+      Symbol symbol = await _mapController.addSymbol(
+        SymbolOptions(
+          geometry: point.location,
+          iconImage: 'location_on',
+          iconSize: 0.15,
+          iconColor: '#FF0000',
+          zIndex: 99,
+        ),
+        {'id': point.id},
+      );
+      _drawnLandslidePoints.add(symbol);
+    } catch (e) {
+      print('Error drawing landslide point: $e');
     }
   }
+}
+
+// Thêm phương thức này vào lớp MapUtils
+Future<Uint8List> _loadImageFromAsset(String assetName) async {
+  final ByteData data = await rootBundle.load(assetName);
+  return data.buffer.asUint8List();
+}
 
   Future<void> ensureLandslidePointsOnTop() async {
     for (var symbol in _drawnLandslidePoints) {
@@ -231,16 +243,17 @@ class MapUtils {
     }
   }
 
-  Future<void> clearLandslidePointsOnMap() async {
-    for (var symbol in _drawnLandslidePoints) {
-      try {
-        await _mapController.removeSymbol(symbol);
-      } catch (e) {
-        print('Error removing landslide point: $e');
-      }
+Future<void> clearLandslidePointsOnMap() async {
+  final symbolsToRemove = List<Symbol>.from(_drawnLandslidePoints);
+  for (var symbol in symbolsToRemove) {
+    try {
+      await _mapController.removeSymbol(symbol);
+    } catch (e) {
+      print('Error removing landslide point: $e');
     }
-    _drawnLandslidePoints.clear();
   }
+  _drawnLandslidePoints.clear();
+}
 
   Future<void> toggleLandslidePointsVisibility(bool isVisible) async {
     for (var symbol in _drawnLandslidePoints) {
