@@ -25,9 +25,9 @@ class SelectPageState extends State<SelectPage> {
     List<Widget> pages = [
       const HomePage(),
       const MapboxPage(),
-      const ManagePage(), // Forecast page placeholder
+      const ManagePage(),
       const ChartPage(),
-      const SettingsPage(), // Settings page placeholder
+      const SettingsPage(),
     ];
     return Scaffold(
         body: AnimatedSwitcher(
