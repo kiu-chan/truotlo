@@ -4,6 +4,7 @@ import 'package:truotlo/src/page/chart/chart_page.dart';
 import 'package:truotlo/src/page/map/map_page.dart';
 import 'package:truotlo/src/page/mangage/manage_page.dart';
 import 'package:truotlo/src/page/settings/settings_page.dart';
+import 'package:truotlo/src/user/authService.dart';
 
 class SelectPage extends StatefulWidget {
   const SelectPage({super.key});
@@ -13,11 +14,20 @@ class SelectPage extends StatefulWidget {
 }
 
 class SelectPageState extends State<SelectPage> {
+  bool _isLoggedIn = false;
   int currentindex = 0;
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    bool loggedIn = await UserPreferences.isLoggedIn();
+    setState(() {
+      _isLoggedIn = loggedIn;
+    });
   }
 
   @override
@@ -25,7 +35,7 @@ class SelectPageState extends State<SelectPage> {
     List<Widget> pages = [
       const HomePage(),
       const MapboxPage(),
-      const ManagePage(),
+      if (_isLoggedIn) const ManagePage(),
       const ChartPage(),
       const SettingsPage(),
     ];
@@ -48,19 +58,21 @@ class SelectPageState extends State<SelectPage> {
             currentIndex: currentindex,
             selectedItemColor: Colors.blue,
             unselectedItemColor: Colors.grey,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
+            items: [
+              const BottomNavigationBarItem(
+                  icon: Icon(Icons.home), label: 'Home'),
+              const BottomNavigationBarItem(
                   icon: Icon(Icons.map_outlined), label: 'Map'),
-              BottomNavigationBarItem(
-                icon: Icon((Icons.manage_accounts)),
-                label: "Manage",
-              ),
-              BottomNavigationBarItem(
+              if (_isLoggedIn)
+                const BottomNavigationBarItem(
+                  icon: Icon((Icons.manage_accounts)),
+                  label: "Manage",
+                ),
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.ssid_chart),
                 label: "Chart",
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.settings),
                 label: "Settings",
               ),

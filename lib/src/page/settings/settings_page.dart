@@ -6,13 +6,13 @@ import 'package:truotlo/src/select_page.dart';
 import 'package:truotlo/src/user/authService.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
-  _SettingsPageState createState() => _SettingsPageState();
+  SettingsPageState createState() => SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class SettingsPageState extends State<SettingsPage> {
   bool _isLoggedIn = false;
   Map<String, String?> _userData = {};
 
@@ -72,7 +72,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         trailing: IconButton(
                           icon: const Icon(Icons.edit),
                           onPressed: () {
-                            // TODO: Implement edit functionality
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text(
