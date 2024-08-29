@@ -22,7 +22,7 @@ class LandslideDatabase {
             ELSE ST_Centroid(geom)
           END
         ) as lat 
-      FROM public.landslide
+      FROM public.landslides
     ''');
 
     return results
@@ -36,22 +36,31 @@ class LandslideDatabase {
 
   Future<Map<String, dynamic>> fetchLandslideDetail(int id) async {
     final results = await connection.query('''
-      SELECT 
+    SELECT 
         l.id,
-        l.lon,
-        l.lat,
+        ST_X(
+          CASE 
+            WHEN ST_GeometryType(l.geom) = 'ST_Point' THEN l.geom
+            ELSE ST_Centroid(l.geom)
+          END
+        ) as lon, 
+        ST_Y(
+          CASE 
+            WHEN ST_GeometryType(l.geom) = 'ST_Point' THEN l.geom
+            ELSE ST_Centroid(l.geom)
+          END
+        ) as lat,
         l.commune_id,
-        l.ten_xa,
         l.vi_tri,
         l.mo_ta,
         d.ten_huyen AS district_name,
         x.ten_xa AS commune_name
       FROM 
-        public.landslide l
+        public.landslides l
       LEFT JOIN 
-        public.districts d ON ST_Contains(d.geom, l.geom)
+        public.map_districts d ON ST_Intersects(d.geom, l.geom)
       LEFT JOIN 
-        public.xa x ON l.commune_id = x.id
+        public.map_communes x ON l.commune_id = x.id
       WHERE 
         l.id = @id
     ''', substitutionValues: {'id': id});
@@ -62,11 +71,10 @@ class LandslideDatabase {
         'lon': results[0][1],
         'lat': results[0][2],
         'commune_id': results[0][3],
-        'ten_xa': results[0][4],
-        'vi_tri': results[0][5],
-        'mo_ta': results[0][6],
-        'district_name': results[0][7],
-        'commune_name': results[0][8],
+        'vi_tri': results[0][4],
+        'mo_ta': results[0][5],
+        'district_name': results[0][6],
+        'commune_name': results[0][7],
       };
     }
     return {};

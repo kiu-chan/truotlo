@@ -10,7 +10,7 @@ class DistrictDatabase {
 
   Future<List<District>> fetchDistrictsData() async {
     final results = await connection.query(
-      "SELECT id, ten_huyen, ST_AsText(geom) as geom FROM public.districts"
+      "SELECT id, ten_huyen, ST_AsText(geom) as geom FROM public.map_districts"
     );
     
     List<District> districts = [];

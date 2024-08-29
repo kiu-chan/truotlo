@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
-
+import 'package:truotlo/src/data/manage/landslide_point.dart';
 
 class ManagePage extends StatefulWidget {
   const ManagePage({super.key});
@@ -67,13 +67,53 @@ class ManagePageState extends State<ManagePage> {
     ),
   ];
 
+  List<LandslidePoint> landslidePoints = [
+    LandslidePoint(
+      id: '1',
+      name: 'Núi Cấm (Cát Thành)',
+      code: '7360',
+      latitude: 13.7897,
+      longitude: 109.1234,
+    ),
+    LandslidePoint(
+      id: '2',
+      name: 'Núi Gành (Cát Minh)',
+      code: '7359',
+      latitude: 13.8012,
+      longitude: 109.2345,
+    ),
+    LandslidePoint(
+      id: '3',
+      name: 'Đèo Vĩnh Hội (Cát Hải)',
+      code: '7362',
+      latitude: 13.8123,
+      longitude: 109.3456,
+    ),
+    LandslidePoint(
+      id: '4',
+      name: 'Đèo An Khê',
+      code: '7358',
+      latitude: 13.8234,
+      longitude: 109.4567,
+    ),
+    LandslidePoint(
+      id: '5',
+      name: 'Đèo Chánh Oai (Cát Hải)',
+      code: '7361',
+      latitude: 13.8345,
+      longitude: 109.5678,
+    ),
+  ];
+
   bool showForecasts = true;
+  bool showHourlyWarnings = false;
+  bool showLandslidePoints = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(showForecasts ? 'Dự báo 5 ngày' : 'Cảnh báo theo giờ'),
+        title: Text(_getAppBarTitle()),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -92,7 +132,7 @@ class ManagePageState extends State<ManagePage> {
         ],
       ),
       endDrawer: buildDrawer(),
-      body: showForecasts ? buildForecastList() : buildHourlyWarningList(),
+      body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -104,55 +144,60 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
+  String _getAppBarTitle() {
+    if (showForecasts) return 'Dự báo 5 ngày';
+    if (showHourlyWarnings) return 'Cảnh báo theo giờ';
+    if (showLandslidePoints) return 'Danh sách các điểm trượt lở';
+    return 'Quản lý';
+  }
+
+  Widget _buildBody() {
+    if (showForecasts) return buildForecastList();
+    if (showHourlyWarnings) return buildHourlyWarningList();
+    if (showLandslidePoints) return buildLandslidePointList();
+    return const Center(child: Text('Chọn một danh mục để xem'));
+  }
+
   Widget buildDrawer() {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: <Widget>[
           const DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
+            decoration: BoxDecoration(color: Colors.blue),
             child: Text(
               'Menu Quản lý',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: const Text('Dự báo 5 ngày'),
-            onTap: () {
-              setState(() {
-                showForecasts = true;
-              });
-              Navigator.pop(context);
-            },
+            onTap: () => _changeView(forecasts: true),
           ),
           ListTile(
             leading: const Icon(Icons.access_time),
             title: const Text('Cảnh báo theo giờ'),
-            onTap: () {
-              setState(() {
-                showForecasts = false;
-              });
-              Navigator.pop(context);
-            },
+            onTap: () => _changeView(hourlyWarnings: true),
+          ),
+          ListTile(
+            leading: const Icon(Icons.landscape),
+            title: const Text('Điểm trượt lở'),
+            onTap: () => _changeView(landslidePoints: true),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Cài đặt'),
-            onTap: () {
-              Navigator.pop(context);
-              // Thêm navigation đến trang cài đặt
-            },
-          ),
         ],
       ),
     );
+  }
+
+  void _changeView({bool forecasts = false, bool hourlyWarnings = false, bool landslidePoints = false}) {
+    setState(() {
+      showForecasts = forecasts;
+      showHourlyWarnings = hourlyWarnings;
+      showLandslidePoints = landslidePoints;
+    });
+    Navigator.pop(context);
   }
 
   Widget buildForecastList() {
@@ -204,6 +249,35 @@ class ManagePageState extends State<ManagePage> {
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () => deleteHourlyWarning(index),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget buildLandslidePointList() {
+    return ListView.builder(
+      itemCount: landslidePoints.length,
+      itemBuilder: (context, index) {
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ListTile(
+            title: Text(landslidePoints[index].name),
+            subtitle: Text('Mã: ${landslidePoints[index].code}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.visibility, color: Colors.blue),
+                  onPressed: () => showLandslidePointDetails(landslidePoints[index]),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => deleteLandslidePoint(index),
                 ),
               ],
             ),
@@ -276,6 +350,32 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
+  void showLandslidePointDetails(LandslidePoint point) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(point.name),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Mã: ${point.code}'),
+                Text('Vĩ độ: ${point.latitude}'),
+                Text('Kinh độ: ${point.longitude}'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Đóng'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void deleteForecast(int index) {
     showDialog(
       context: context,
@@ -331,6 +431,36 @@ class ManagePageState extends State<ManagePage> {
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Đã xóa cảnh báo')),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void deleteLandslidePoint(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Xác nhận xóa'),
+          content: const Text('Bạn có chắc chắn muốn xóa điểm trượt lở này?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Hủy'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text('Xóa'),
+              onPressed: () {
+                setState(() {
+                  landslidePoints.removeAt(index);
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã xóa điểm trượt lở')),
                 );
               },
             ),

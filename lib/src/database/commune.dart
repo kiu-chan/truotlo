@@ -15,7 +15,7 @@ class CommuneDatabase {
 
   Future<List<Commune>> fetchCommunesData() async {
     final results = await connection.query(
-      "SELECT id, ST_AsText(geom) as geom FROM public.xa"
+      "SELECT id, ST_AsText(geom) as geom FROM public.map_communes"
     );
     
     List<Commune> communes = [];
