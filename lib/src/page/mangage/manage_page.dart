@@ -75,7 +75,7 @@ class ManagePageState extends State<ManagePage> with SingleTickerProviderStateMi
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Dự báo 5 ngày'),
+            Tab(text: 'Dự báo 5 ngày tới'),
             Tab(text: 'Cảnh báo theo giờ'),
             Tab(text: 'Điểm trượt lở'),
           ],
