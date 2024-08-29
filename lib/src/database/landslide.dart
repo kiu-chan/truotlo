@@ -1,4 +1,6 @@
 import 'package:postgres/postgres.dart';
+import 'package:truotlo/src/data/manage/forecast.dart';
+import 'package:truotlo/src/data/manage/hourly_warning.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 
 class LandslideDatabase {
@@ -79,4 +81,104 @@ class LandslideDatabase {
     }
     return {};
   }
+
+  Future<List<HourlyWarning>> fetchHourlyWarnings() async {
+    final results = await connection.mappedResultsQuery('''
+      SELECT 
+        fr.id, 
+        fr.nam as year, 
+        fr.thang as month, 
+        fr.ngay as day, 
+        fr.gio as hour,
+        frp.ten_diem as location,
+        frp.nguy_co as warning_level,
+        frp.vi_tri as description,
+        frp.kinh_do as lat,
+        frp.vi_do as lon
+      FROM 
+        public.forecast_records fr
+      JOIN 
+        public.forecast_record_points frp ON fr.id = frp.record_id
+      ORDER BY 
+        fr.nam DESC, fr.thang DESC, fr.ngay DESC, fr.gio DESC
+      LIMIT 100
+    ''');
+
+    return results.map((row) {
+      final data = row['forecast_records']!;
+      final pdata = row['forecast_record_points']!;
+      return HourlyWarning(
+        id: data['id'] ?? 0,
+        year: data['year'] ?? 0,
+        month: data['month'] ?? 0,
+        day: data['day'] ?? 0,
+        hour: data['hour'] ?? 0,
+        location: pdata['location'] ?? '',
+        warningLevel: pdata['warning_level'] ?? '',
+        description: pdata['description'] ?? '',
+        lat: double.parse(pdata['lat']),
+        lon: double.parse(pdata['lon']),
+      );
+    }).toList();
+  }
+
+Future<List<Forecast>> fetchForecasts() async {
+  if (connection != null) {
+    try {
+      final results = await connection!.mappedResultsQuery('''
+        SELECT 
+          fs.id, 
+          fs.nam, 
+          fs.thang, 
+          fs.created_at as start_date,
+          fs.created_at + interval '5 days' as end_date,
+          fp.ten_diem as location,
+          fp.huyen as district,
+          fp.xa as commune,
+          fp.tinh as province,
+          json_agg(json_build_object(
+            'day', fr.ngay,
+            'risk_level', fr.nguy_co,
+            'date', fs.created_at + (fr.ngay - 1) * interval '1 day'
+          ) ORDER BY fr.ngay) as days
+        FROM 
+          public.forecast_sessions fs
+        JOIN 
+          public.forecast_points fp ON fs.id = fp.session_id
+        JOIN 
+          public.forecast_risks fr ON fp.id = fr.point_id
+        GROUP BY 
+          fs.id, fp.ten_diem, fp.huyen, fp.xa, fp.tinh
+        ORDER BY 
+          fs.created_at DESC
+        LIMIT 10
+      ''');
+
+      return results.map((row) {
+        final forecastData = row['forecast_sessions']!;
+        final pointData = row['forecast_points']!;
+
+        return Forecast(
+          id: forecastData['id'].toString() ?? '',
+          name: 'Forecast ${forecastData['nam']}-${forecastData['thang']}' ?? '',
+          location: pointData['location'] ?? '',
+          province: pointData['province'] ?? '',
+          district: pointData['district'] ?? '',
+          commune: pointData['commune'] ?? '',
+          startDate: forecastData['start_date'] ?? '',
+          endDate: forecastData['end_date'] ?? '',
+          days: (forecastData['days'] as List).map((day) => DayForecast(
+            day: day['day'] ?? 0,
+            riskLevel: day['risk_level'] ?? '',
+            date: day['date'] ?? '',
+          )).toList(),
+        );
+      }).toList();
+    } catch (e) {
+      print('Error loading forecasts: $e');
+      return [];
+    }
+  }
+  return [];
+}
 }

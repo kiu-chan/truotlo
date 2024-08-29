@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
 import 'package:truotlo/src/data/manage/landslide_point.dart';
+import 'package:truotlo/src/database/database.dart';
+import 'package:truotlo/src/database/landslide.dart';
 
 class ManagePage extends StatefulWidget {
   const ManagePage({super.key});
@@ -11,61 +14,10 @@ class ManagePage extends StatefulWidget {
 }
 
 class ManagePageState extends State<ManagePage> {
-  List<Forecast> forecasts = [
-    Forecast(
-      id: '1',
-      name: 'Phiên dự báo 2024 - 6',
-      location: 'Đà Nẵng',
-      province: 'Đà Nẵng',
-      district: 'Hải Châu',
-      commune: 'Thanh Bình',
-      days: [
-        DayForecast(day: 1, riskLevel: 'Cao'),
-        DayForecast(day: 2, riskLevel: 'Trung bình'),
-        DayForecast(day: 3, riskLevel: 'Thấp'),
-        DayForecast(day: 4, riskLevel: 'Thấp'),
-        DayForecast(day: 5, riskLevel: 'Trung bình'),
-      ],
-    ),
-    Forecast(
-      id: '2',
-      name: 'Phiên dự báo 2024 - 12',
-      location: 'Hà Nội',
-      province: 'Hà Nội',
-      district: 'Ba Đình',
-      commune: 'Kim Mã',
-      days: [
-        DayForecast(day: 1, riskLevel: 'Thấp'),
-        DayForecast(day: 2, riskLevel: 'Thấp'),
-        DayForecast(day: 3, riskLevel: 'Trung bình'),
-        DayForecast(day: 4, riskLevel: 'Cao'),
-        DayForecast(day: 5, riskLevel: 'Cao'),
-      ],
-    ),
-  ];
+  final DefaultDatabase database = DefaultDatabase();
+  List<Forecast> forecasts = [];
 
-  List<HourlyWarning> hourlyWarnings = [
-    HourlyWarning(
-      id: '1',
-      hour: 2,
-      day: 2,
-      month: 2,
-      year: 2032,
-      location: 'Hà Nội',
-      warningLevel: 'Nguy hiểm',
-      description: 'Mưa lớn kèm gió giật mạnh',
-    ),
-    HourlyWarning(
-      id: '2',
-      hour: 15,
-      day: 8,
-      month: 3,
-      year: 2024,
-      location: 'Hồ Chí Minh',
-      warningLevel: 'Cảnh báo',
-      description: 'Nắng nóng gay gắt',
-    ),
-  ];
+  List<HourlyWarning> hourlyWarnings = [];
 
   List<LandslidePoint> landslidePoints = [
     LandslidePoint(
@@ -110,6 +62,44 @@ class ManagePageState extends State<ManagePage> {
   bool showLandslidePoints = false;
 
   @override
+  void initState() {
+    super.initState();
+    connectToDatabase();
+    _initializeDatabase();
+  }
+
+  Future<void> _initializeDatabase() async {
+    await _loadHourlyWarnings();
+    await _loadForecasts();
+  }
+
+  Future<void> connectToDatabase() async {
+    await database.connect();
+  }
+
+  Future<void> _loadHourlyWarnings() async {
+    if (database.connection != null) {
+      try {
+        hourlyWarnings = await database.fetchHourlyWarnings();
+        setState(() {});
+      } catch (e) {
+        print('Error loading hourly warnings: $e');
+      }
+    }
+  }
+
+  Future<void> _loadForecasts() async {
+    if (database.connection != null) {
+      try {
+        forecasts = await database.landslideDatabase.fetchForecasts();
+        setState(() {});
+      } catch (e) {
+        print('Error loading forecasts: $e');
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -136,7 +126,8 @@ class ManagePageState extends State<ManagePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Chức năng thêm mới đang được phát triển')),
+            const SnackBar(
+                content: Text('Chức năng thêm mới đang được phát triển')),
           );
         },
         child: const Icon(Icons.add),
@@ -171,14 +162,17 @@ class ManagePageState extends State<ManagePage> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: const Text('Dự báo 5 ngày'),
-            onTap: () => _changeView(forecasts: true),
-          ),
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Dự báo 5 ngày'),
+              onTap: () => {
+                    _loadForecasts(),
+                    _changeView(forecasts: true),
+                  }),
           ListTile(
             leading: const Icon(Icons.access_time),
             title: const Text('Cảnh báo theo giờ'),
-            onTap: () => _changeView(hourlyWarnings: true),
+            onTap: () =>
+                {_loadHourlyWarnings(), _changeView(hourlyWarnings: true)},
           ),
           ListTile(
             leading: const Icon(Icons.landscape),
@@ -191,7 +185,10 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
-  void _changeView({bool forecasts = false, bool hourlyWarnings = false, bool landslidePoints = false}) {
+  void _changeView(
+      {bool forecasts = false,
+      bool hourlyWarnings = false,
+      bool landslidePoints = false}) {
     setState(() {
       showForecasts = forecasts;
       showHourlyWarnings = hourlyWarnings;
@@ -200,51 +197,52 @@ class ManagePageState extends State<ManagePage> {
     Navigator.pop(context);
   }
 
-  Widget buildForecastList() {
-    return ListView.builder(
-      itemCount: forecasts.length,
-      itemBuilder: (context, index) {
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: ListTile(
-            title: Text(forecasts[index].name),
-            subtitle: Text(forecasts[index].location),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.visibility, color: Colors.blue),
-                  onPressed: () => showForecastDetails(forecasts[index]),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => deleteForecast(index),
-                ),
-              ],
-            ),
+Widget buildForecastList() {
+  return ListView.builder(
+    itemCount: forecasts.length,
+    itemBuilder: (context, index) {
+      return Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: ListTile(
+          title: Text(forecasts[index].name),
+          subtitle: Text('${forecasts[index].location}\n${forecasts[index].formattedDateRange}'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.visibility, color: Colors.blue),
+                onPressed: () => showForecastDetails(forecasts[index]),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => deleteForecast(index),
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget buildHourlyWarningList() {
     return ListView.builder(
       itemCount: hourlyWarnings.length,
       itemBuilder: (context, index) {
+        final warning = hourlyWarnings[index];
         return Card(
           elevation: 2,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: ListTile(
-            title: Text(hourlyWarnings[index].formattedDate),
-            subtitle: Text(hourlyWarnings[index].location),
+            title: Text(warning.formattedDate),
+            subtitle: Text(warning.location),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   icon: const Icon(Icons.visibility, color: Colors.blue),
-                  onPressed: () => showHourlyWarningDetails(hourlyWarnings[index]),
+                  onPressed: () => showHourlyWarningDetails(warning),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -273,7 +271,8 @@ class ManagePageState extends State<ManagePage> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.visibility, color: Colors.blue),
-                  onPressed: () => showLandslidePointDetails(landslidePoints[index]),
+                  onPressed: () =>
+                      showLandslidePointDetails(landslidePoints[index]),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -287,40 +286,44 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
-  void showForecastDetails(Forecast forecast) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(forecast.name),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('Vị trí: ${forecast.location}'),
-                Text('Tỉnh: ${forecast.province}'),
-                Text('Huyện: ${forecast.district}'),
-                Text('Xã: ${forecast.commune}'),
-                const SizedBox(height: 10),
-                const Text('Dự báo 5 ngày:', style: TextStyle(fontWeight: FontWeight.bold)),
-                ...forecast.days.map((day) => Padding(
+void showForecastDetails(Forecast forecast) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(forecast.name),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              Text('Vị trí: ${forecast.location}'),
+              Text('Tỉnh: ${forecast.province}'),
+              Text('Huyện: ${forecast.district}'),
+              Text('Xã: ${forecast.commune}'),
+              Text('Thời gian: ${forecast.formattedDateRange}'),
+              const SizedBox(height: 10),
+              const Text('Dự báo 5 ngày:', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...forecast.days.map((day) {
+                final dateFormat = DateFormat('dd/MM/yyyy');
+                return Padding(
                   padding: const EdgeInsets.only(left: 10),
-                  child: Text('Ngày ${day.day}: ${day.riskLevel}'),
-                )),
-              ],
-            ),
+                  child: Text('${dateFormat.format(day.date)}: ${day.riskLevel}'),
+                );
+              }),
+            ],
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Đóng'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Đóng'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
 
   void showHourlyWarningDetails(HourlyWarning warning) {
     showDialog(
@@ -334,6 +337,8 @@ class ManagePageState extends State<ManagePage> {
                 Text('Vị trí: ${warning.location}'),
                 Text('Mức độ cảnh báo: ${warning.warningLevel}'),
                 Text('Mô tả: ${warning.description}'),
+                Text('Vĩ độ: ${warning.lat}'),
+                Text('Kinh độ: ${warning.lon}'),
               ],
             ),
           ),

@@ -1,5 +1,5 @@
 class HourlyWarning {
-  final String id;
+  final int id;
   final int hour;
   final int day;
   final int month;
@@ -7,6 +7,8 @@ class HourlyWarning {
   final String location;
   final String warningLevel;
   final String description;
+  final double lat;
+  final double lon;
 
   HourlyWarning({
     required this.id,
@@ -17,6 +19,8 @@ class HourlyWarning {
     required this.location,
     required this.warningLevel,
     required this.description,
+    required this.lat,
+    required this.lon,
   });
 
   String get formattedDate => 'Giờ $hour - Ngày $day/$month/$year';
