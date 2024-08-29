@@ -11,44 +11,27 @@ class ManagePage extends StatefulWidget {
   ManagePageState createState() => ManagePageState();
 }
 
-class ManagePageState extends State<ManagePage> {
+class ManagePageState extends State<ManagePage> with SingleTickerProviderStateMixin {
   final DefaultDatabase database = DefaultDatabase();
   List<Forecast> forecasts = [];
-
   List<HourlyWarning> hourlyWarnings = [];
-
   List<ManageLandslidePoint> landslidePoints = [];
 
-  bool showForecasts = false;
-  bool showHourlyWarnings = false;
-  bool showLandslidePoints = false;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    connectToDatabase();
-    _initializeDatabase();
-  }
-
-  Future<void> _initializeDatabase() async {
-    // await _loadHourlyWarnings();
-    await _loadForecasts();
-    // await _loadLandslidePoints();
+    _tabController = TabController(length: 3, vsync: this);
+    connectToDatabase().then((_) {
+      _loadForecasts();
+      _loadHourlyWarnings();
+      _loadLandslidePoints();
+    });
   }
 
   Future<void> connectToDatabase() async {
     await database.connect();
-  }
-
-  Future<void> _loadHourlyWarnings() async {
-    if (database.connection != null) {
-      try {
-        hourlyWarnings = await database.fetchHourlyWarnings();
-        setState(() {});
-      } catch (e) {
-        print('Error loading hourly warnings: $e');
-      }
-    }
   }
 
   Future<void> _loadForecasts() async {
@@ -58,6 +41,17 @@ class ManagePageState extends State<ManagePage> {
         setState(() {});
       } catch (e) {
         print('Error loading forecasts: $e');
+      }
+    }
+  }
+
+  Future<void> _loadHourlyWarnings() async {
+    if (database.connection != null) {
+      try {
+        hourlyWarnings = await database.fetchHourlyWarnings();
+        setState(() {});
+      } catch (e) {
+        print('Error loading hourly warnings: $e');
       }
     }
   }
@@ -77,26 +71,24 @@ class ManagePageState extends State<ManagePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getAppBarTitle()),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đang cập nhật dữ liệu...')),
-              );
-            },
-          ),
-          Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-            ),
-          ),
+        title: const Text('Quản lý'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Dự báo 5 ngày'),
+            Tab(text: 'Cảnh báo theo giờ'),
+            Tab(text: 'Điểm trượt lở'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          buildForecastList(forecasts),
+          buildHourlyWarningList(hourlyWarnings),
+          buildLandslidePointList(landslidePoints),
         ],
       ),
-      endDrawer: buildDrawer(),
-      body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -109,74 +101,7 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
-  String _getAppBarTitle() {
-    if (showForecasts) return 'Dự báo 5 ngày';
-    if (showHourlyWarnings) return 'Cảnh báo theo giờ';
-    if (showLandslidePoints) return 'Danh sách các điểm trượt lở';
-    return 'Quản lý';
-  }
-
-  Widget _buildBody() {
-    if (showForecasts || (!showHourlyWarnings && !showLandslidePoints)) {
-      _initializeDatabase();
-      return buildForecastList();
-    }
-    if (showHourlyWarnings) return buildHourlyWarningList();
-    if (showLandslidePoints) return buildLandslidePointList();
-    return const Center(child: Text('Chọn một danh mục để xem'));
-  }
-
-  Widget buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Colors.blue),
-            child: Text(
-              'Menu Quản lý',
-              style: TextStyle(color: Colors.white, fontSize: 24),
-            ),
-          ),
-          ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Dự báo 5 ngày'),
-              onTap: () => {
-                    _loadForecasts(),
-                    _changeView(forecasts: true),
-                  }),
-          ListTile(
-            leading: const Icon(Icons.access_time),
-            title: const Text('Cảnh báo theo giờ'),
-            onTap: () =>
-                {_loadHourlyWarnings(), _changeView(hourlyWarnings: true)},
-          ),
-          ListTile(
-              leading: const Icon(Icons.landscape),
-              title: const Text('Điểm trượt lở'),
-              onTap: () => {
-                    _loadLandslidePoints(),
-                    _changeView(landslidePoints: true),
-                  }),
-          const Divider(),
-        ],
-      ),
-    );
-  }
-
-  void _changeView(
-      {bool forecasts = false,
-      bool hourlyWarnings = false,
-      bool landslidePoints = false}) {
-    setState(() {
-      showForecasts = forecasts;
-      showHourlyWarnings = hourlyWarnings;
-      showLandslidePoints = landslidePoints;
-    });
-    Navigator.pop(context);
-  }
-
-  Widget buildForecastList() {
+  Widget buildForecastList(List<Forecast> forecasts) {
     return ListView.builder(
       itemCount: forecasts.length,
       itemBuilder: (context, index) {
@@ -204,7 +129,7 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
-  Widget buildHourlyWarningList() {
+  Widget buildHourlyWarningList(List<HourlyWarning> hourlyWarnings) {
     return ListView.builder(
       itemCount: hourlyWarnings.length,
       itemBuilder: (context, index) {
@@ -234,7 +159,7 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
-  Widget buildLandslidePointList() {
+  Widget buildLandslidePointList(List<ManageLandslidePoint> landslidePoints) {
     return ListView.builder(
       itemCount: landslidePoints.length,
       itemBuilder: (context, index) {
@@ -257,13 +182,12 @@ class ManagePageState extends State<ManagePage> {
 
   void showForecastDetails(String forecastId) async {
     try {
-      final detail =
-          await database.landslideDatabase.fetchForecastDetail(forecastId);
+      final detail = await database.landslideDatabase.fetchForecastDetail(forecastId);
       showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Chi tiết dự báo'),
+            title: const Text('Chi tiết dự báo'),
             content: SingleChildScrollView(
               child: ListBody(
                 children: <Widget>[
@@ -275,10 +199,8 @@ class ManagePageState extends State<ManagePage> {
                   Text('Huyện: ${detail.huyen}'),
                   Text('Xã: ${detail.xa}'),
                   const SizedBox(height: 10),
-                  const Text('Dự báo các ngày:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...detail.days.map((day) => Text(
-                      'Ngày ${day.day} (${day.date.day}/${day.date.month}/${day.date.year}) - Nguy cơ: ${day.riskLevel}')),
+                  const Text('Dự báo các ngày:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...detail.days.map((day) => Text('Ngày ${day.day} (${day.date.day}/${day.date.month}/${day.date.year}) - Nguy cơ: ${day.riskLevel}')),
                 ],
               ),
             ),
@@ -373,7 +295,7 @@ class ManagePageState extends State<ManagePage> {
             ),
             TextButton(
               child: const Text('Xóa'),
-              onPressed: () {
+              onPressed: () async {
                 setState(() {
                   forecasts.removeAt(index);
                 });
@@ -405,7 +327,7 @@ class ManagePageState extends State<ManagePage> {
             ),
             TextButton(
               child: const Text('Xóa'),
-              onPressed: () {
+              onPressed: () async {
                 setState(() {
                   hourlyWarnings.removeAt(index);
                 });
@@ -421,33 +343,9 @@ class ManagePageState extends State<ManagePage> {
     );
   }
 
-  void deleteLandslidePoint(int index) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Xác nhận xóa'),
-          content: const Text('Bạn có chắc chắn muốn xóa điểm trượt lở này?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Hủy'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            TextButton(
-              child: const Text('Xóa'),
-              onPressed: () {
-                setState(() {
-                  landslidePoints.removeAt(index);
-                });
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã xóa điểm trượt lở')),
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 }
