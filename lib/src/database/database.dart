@@ -3,6 +3,7 @@ import 'package:postgres/postgres.dart';
 import 'package:truotlo/src/data/account/user.dart';
 import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
+import 'package:truotlo/src/data/manage/landslide_point.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/database/account.dart';
@@ -74,5 +75,9 @@ class DefaultDatabase {
 
   Future<List<Forecast>> fetchForecasts() async {
     return await landslideDatabase.fetchForecasts();
+  }
+
+  Future<List<ManageLandslidePoint>> fetchListLandslidePoints() async {
+    return await landslideDatabase.fetchListLandslidePoints();
   }
 }

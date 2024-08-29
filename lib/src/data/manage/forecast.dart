@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 class Forecast {
   final String id;
   final String name;
+  final int year;
+  final int month;
   final String location;
   final String province;
   final String district;
@@ -14,37 +16,43 @@ class Forecast {
   Forecast({
     required this.id,
     required this.name,
-    required this.location,
-    required this.province,
-    required this.district,
-    required this.commune,
+    required this.year,
+    required this.month,
+    this.location = '',
+    this.province = '',
+    this.district = '',
+    this.commune = '',
     required this.startDate,
     required this.endDate,
-    required this.days,
+    this.days = const [],
   });
 
   String get formattedDateRange {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    return '${dateFormat.format(startDate)} - ${dateFormat.format(endDate)}';
+    final dateFormat = DateFormat('MM/yyyy');
+    return dateFormat.format(startDate);
   }
-
-factory Forecast.fromJson(Map<String, dynamic> json) {
-  return Forecast(
-    id: json['id'].toString(),
-    name: json['name'] ?? '',
-    location: json['location'] ?? '',
-    province: json['province'] ?? '',
-    district: json['district'] ?? '',
-    commune: json['commune'] ?? '',
-    startDate: json['start_date'] != null ? DateTime.parse(json['start_date']) : DateTime.now(),
-    endDate: json['end_date'] != null ? DateTime.parse(json['end_date']) : DateTime.now(),
-    days: json['days'] != null
-        ? (json['days'] as List<dynamic>)
-            .map((day) => DayForecast.fromJson(day))
-            .toList()
-        : [],
-  );
 }
+
+class ForecastDetail {
+  final String tenDiem;
+  final String viTri;
+  final double kinhDo;
+  final double viDo;
+  final String tinh;
+  final String huyen;
+  final String xa;
+  final List<DayForecast> days;
+
+  ForecastDetail({
+    required this.tenDiem,
+    required this.viTri,
+    required this.kinhDo,
+    required this.viDo,
+    required this.tinh,
+    required this.huyen,
+    required this.xa,
+    required this.days,
+  });
 }
 
 class DayForecast {
@@ -53,12 +61,4 @@ class DayForecast {
   final DateTime date;
 
   DayForecast({required this.day, required this.riskLevel, required this.date});
-
-  factory DayForecast.fromJson(Map<String, dynamic> json) {
-    return DayForecast(
-      day: json['day'],
-      riskLevel: json['risk_level'],
-      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
-    );
-  }
 }

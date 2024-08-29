@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
 import 'package:truotlo/src/data/manage/landslide_point.dart';
 import 'package:truotlo/src/database/database.dart';
-import 'package:truotlo/src/database/landslide.dart';
 
 class ManagePage extends StatefulWidget {
   const ManagePage({super.key});
@@ -19,45 +17,9 @@ class ManagePageState extends State<ManagePage> {
 
   List<HourlyWarning> hourlyWarnings = [];
 
-  List<LandslidePoint> landslidePoints = [
-    LandslidePoint(
-      id: '1',
-      name: 'Núi Cấm (Cát Thành)',
-      code: '7360',
-      latitude: 13.7897,
-      longitude: 109.1234,
-    ),
-    LandslidePoint(
-      id: '2',
-      name: 'Núi Gành (Cát Minh)',
-      code: '7359',
-      latitude: 13.8012,
-      longitude: 109.2345,
-    ),
-    LandslidePoint(
-      id: '3',
-      name: 'Đèo Vĩnh Hội (Cát Hải)',
-      code: '7362',
-      latitude: 13.8123,
-      longitude: 109.3456,
-    ),
-    LandslidePoint(
-      id: '4',
-      name: 'Đèo An Khê',
-      code: '7358',
-      latitude: 13.8234,
-      longitude: 109.4567,
-    ),
-    LandslidePoint(
-      id: '5',
-      name: 'Đèo Chánh Oai (Cát Hải)',
-      code: '7361',
-      latitude: 13.8345,
-      longitude: 109.5678,
-    ),
-  ];
+  List<ManageLandslidePoint> landslidePoints = [];
 
-  bool showForecasts = true;
+  bool showForecasts = false;
   bool showHourlyWarnings = false;
   bool showLandslidePoints = false;
 
@@ -69,8 +31,9 @@ class ManagePageState extends State<ManagePage> {
   }
 
   Future<void> _initializeDatabase() async {
-    await _loadHourlyWarnings();
+    // await _loadHourlyWarnings();
     await _loadForecasts();
+    // await _loadLandslidePoints();
   }
 
   Future<void> connectToDatabase() async {
@@ -95,6 +58,17 @@ class ManagePageState extends State<ManagePage> {
         setState(() {});
       } catch (e) {
         print('Error loading forecasts: $e');
+      }
+    }
+  }
+
+  Future<void> _loadLandslidePoints() async {
+    if (database.connection != null) {
+      try {
+        landslidePoints = await database.fetchListLandslidePoints();
+        setState(() {});
+      } catch (e) {
+        print('Error loading landslide points: $e');
       }
     }
   }
@@ -143,7 +117,10 @@ class ManagePageState extends State<ManagePage> {
   }
 
   Widget _buildBody() {
-    if (showForecasts) return buildForecastList();
+    if (showForecasts || (!showHourlyWarnings && !showLandslidePoints)) {
+      _initializeDatabase();
+      return buildForecastList();
+    }
     if (showHourlyWarnings) return buildHourlyWarningList();
     if (showLandslidePoints) return buildLandslidePointList();
     return const Center(child: Text('Chọn một danh mục để xem'));
@@ -175,10 +152,12 @@ class ManagePageState extends State<ManagePage> {
                 {_loadHourlyWarnings(), _changeView(hourlyWarnings: true)},
           ),
           ListTile(
-            leading: const Icon(Icons.landscape),
-            title: const Text('Điểm trượt lở'),
-            onTap: () => _changeView(landslidePoints: true),
-          ),
+              leading: const Icon(Icons.landscape),
+              title: const Text('Điểm trượt lở'),
+              onTap: () => {
+                    _loadLandslidePoints(),
+                    _changeView(landslidePoints: true),
+                  }),
           const Divider(),
         ],
       ),
@@ -197,34 +176,33 @@ class ManagePageState extends State<ManagePage> {
     Navigator.pop(context);
   }
 
-Widget buildForecastList() {
-  return ListView.builder(
-    itemCount: forecasts.length,
-    itemBuilder: (context, index) {
-      return Card(
-        elevation: 2,
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: ListTile(
-          title: Text(forecasts[index].name),
-          subtitle: Text('${forecasts[index].location}\n${forecasts[index].formattedDateRange}'),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.visibility, color: Colors.blue),
-                onPressed: () => showForecastDetails(forecasts[index]),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => deleteForecast(index),
-              ),
-            ],
+  Widget buildForecastList() {
+    return ListView.builder(
+      itemCount: forecasts.length,
+      itemBuilder: (context, index) {
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ListTile(
+            title: Text(forecasts[index].name),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.visibility, color: Colors.blue),
+                  onPressed: () => showForecastDetails(forecasts[index].id),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => deleteForecast(index),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   Widget buildHourlyWarningList() {
     return ListView.builder(
@@ -260,25 +238,16 @@ Widget buildForecastList() {
     return ListView.builder(
       itemCount: landslidePoints.length,
       itemBuilder: (context, index) {
+        final point = landslidePoints[index];
         return Card(
           elevation: 2,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: ListTile(
-            title: Text(landslidePoints[index].name),
-            subtitle: Text('Mã: ${landslidePoints[index].code}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.visibility, color: Colors.blue),
-                  onPressed: () =>
-                      showLandslidePointDetails(landslidePoints[index]),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => deleteLandslidePoint(index),
-                ),
-              ],
+            title: Text(point.name),
+            subtitle: Text('Mã: ${point.code}'),
+            trailing: IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.blue),
+              onPressed: () => showLandslidePointDetails(point),
             ),
           ),
         );
@@ -286,44 +255,50 @@ Widget buildForecastList() {
     );
   }
 
-void showForecastDetails(Forecast forecast) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(forecast.name),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: <Widget>[
-              Text('Vị trí: ${forecast.location}'),
-              Text('Tỉnh: ${forecast.province}'),
-              Text('Huyện: ${forecast.district}'),
-              Text('Xã: ${forecast.commune}'),
-              Text('Thời gian: ${forecast.formattedDateRange}'),
-              const SizedBox(height: 10),
-              const Text('Dự báo 5 ngày:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...forecast.days.map((day) {
-                final dateFormat = DateFormat('dd/MM/yyyy');
-                return Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Text('${dateFormat.format(day.date)}: ${day.riskLevel}'),
-                );
-              }),
+  void showForecastDetails(String forecastId) async {
+    try {
+      final detail =
+          await database.landslideDatabase.fetchForecastDetail(forecastId);
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Chi tiết dự báo'),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  Text('Tên điểm: ${detail.tenDiem}'),
+                  Text('Vị trí: ${detail.viTri}'),
+                  Text('Kinh độ: ${detail.kinhDo}'),
+                  Text('Vĩ độ: ${detail.viDo}'),
+                  Text('Tỉnh: ${detail.tinh}'),
+                  Text('Huyện: ${detail.huyen}'),
+                  Text('Xã: ${detail.xa}'),
+                  const SizedBox(height: 10),
+                  const Text('Dự báo các ngày:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...detail.days.map((day) => Text(
+                      'Ngày ${day.day} (${day.date.day}/${day.date.month}/${day.date.year}) - Nguy cơ: ${day.riskLevel}')),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Đóng'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
             ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Đóng'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
+          );
+        },
       );
-    },
-  );
-}
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi tải chi tiết dự báo: $e')),
+      );
+    }
+  }
 
   void showHourlyWarningDetails(HourlyWarning warning) {
     showDialog(
@@ -355,7 +330,7 @@ void showForecastDetails(Forecast forecast) {
     );
   }
 
-  void showLandslidePointDetails(LandslidePoint point) {
+  void showLandslidePointDetails(ManageLandslidePoint point) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -367,6 +342,7 @@ void showForecastDetails(Forecast forecast) {
                 Text('Mã: ${point.code}'),
                 Text('Vĩ độ: ${point.latitude}'),
                 Text('Kinh độ: ${point.longitude}'),
+                Text('Mô tả: ${point.description}'),
               ],
             ),
           ),

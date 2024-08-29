@@ -2,6 +2,7 @@ import 'package:postgres/postgres.dart';
 import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
+import 'package:truotlo/src/data/manage/landslide_point.dart';
 
 class LandslideDatabase {
   final PostgreSQLConnection connection;
@@ -122,63 +123,123 @@ class LandslideDatabase {
     }).toList();
   }
 
-Future<List<Forecast>> fetchForecasts() async {
-  if (connection != null) {
-    try {
-      final results = await connection!.mappedResultsQuery('''
-        SELECT 
-          fs.id, 
-          fs.nam, 
-          fs.thang, 
-          fs.created_at as start_date,
-          fs.created_at + interval '5 days' as end_date,
-          fp.ten_diem as location,
-          fp.huyen as district,
-          fp.xa as commune,
-          fp.tinh as province,
-          json_agg(json_build_object(
-            'day', fr.ngay,
-            'risk_level', fr.nguy_co,
-            'date', fs.created_at + (fr.ngay - 1) * interval '1 day'
-          ) ORDER BY fr.ngay) as days
-        FROM 
-          public.forecast_sessions fs
-        JOIN 
-          public.forecast_points fp ON fs.id = fp.session_id
-        JOIN 
-          public.forecast_risks fr ON fp.id = fr.point_id
-        GROUP BY 
-          fs.id, fp.ten_diem, fp.huyen, fp.xa, fp.tinh
-        ORDER BY 
-          fs.created_at DESC
-        LIMIT 10
-      ''');
+  Future<List<Forecast>> fetchForecasts() async {
+    final results = await connection.query('''
+      SELECT DISTINCT 
+        fs.id,
+        fs.nam, 
+        fs.thang
+      FROM 
+        public.forecast_sessions fs
+      ORDER BY 
+        fs.nam DESC, fs.thang DESC
+      LIMIT 10
+    ''');
 
-      return results.map((row) {
-        final forecastData = row['forecast_sessions']!;
-        final pointData = row['forecast_points']!;
-
-        return Forecast(
-          id: forecastData['id'].toString() ?? '',
-          name: 'Forecast ${forecastData['nam']}-${forecastData['thang']}' ?? '',
-          location: pointData['location'] ?? '',
-          province: pointData['province'] ?? '',
-          district: pointData['district'] ?? '',
-          commune: pointData['commune'] ?? '',
-          startDate: forecastData['start_date'] ?? '',
-          endDate: forecastData['end_date'] ?? '',
-          days: (forecastData['days'] as List).map((day) => DayForecast(
-            day: day['day'] ?? 0,
-            riskLevel: day['risk_level'] ?? '',
-            date: day['date'] ?? '',
-          )).toList(),
-        );
-      }).toList();
-    } catch (e) {
-      print('Error loading forecasts: $e');
-      return [];
-    }
+    return results.map((row) {
+      return Forecast(
+        id: row[0].toString(),
+        name: 'Phiên dự báo ${row[2]}/${row[1]}',
+        year: row[1],
+        month: row[2],
+        location: '',
+        province: '',
+        district: '',
+        commune: '',
+        startDate: DateTime(row[1], row[2], 1),
+        endDate: DateTime(row[1], row[2] + 1, 0).subtract(Duration(days: 1)),
+        days: [],
+      );
+    }).toList();
   }
-  return [];
-}
+
+  Future<ForecastDetail> fetchForecastDetail(String id) async {
+    final results = await connection.mappedResultsQuery('''
+      SELECT 
+        fp.ten_diem, 
+        fp.vi_tri, 
+        fp.kinh_do, 
+        fp.vi_do, 
+        fp.tinh, 
+        fp.huyen, 
+        fp.xa,
+        fr.nguy_co,
+        fr.ngay,
+        fs.nam,
+        fs.thang
+      FROM 
+        public.forecast_points fp
+      JOIN
+        public.forecast_risks fr ON fp.id = fr.point_id
+      JOIN
+        public.forecast_sessions fs ON fp.session_id = fs.id
+      WHERE 
+        fs.id = @id
+      ORDER BY
+        fr.ngay
+    ''', substitutionValues: {'id': id});
+
+    if (results.isEmpty) {
+      throw Exception('No forecast found for id $id');
+    }
+
+    final firstRow = results.first;
+    final List<DayForecast> days = results.map((row) {
+      return DayForecast(
+        day: row['forecast_risks']!['ngay'] as int,
+        riskLevel: row['forecast_risks']!['nguy_co'] as String,
+        date: DateTime(
+          row['forecast_sessions']!['nam'] as int,
+          row['forecast_sessions']!['thang'] as int,
+          row['forecast_risks']!['ngay'] as int,
+        ),
+      );
+    }).toList();
+
+    return ForecastDetail(
+      tenDiem: firstRow['forecast_points']!['ten_diem'] as String,
+      viTri: firstRow['forecast_points']!['vi_tri'] as String,
+      kinhDo: double.parse(firstRow['forecast_points']!['kinh_do'] as String),
+      viDo: double.parse(firstRow['forecast_points']!['vi_do'] as String),
+      tinh: firstRow['forecast_points']!['tinh'] as String,
+      huyen: firstRow['forecast_points']!['huyen'] as String,
+      xa: firstRow['forecast_points']!['xa'] as String,
+      days: days,
+    );
+  }
+
+  Future<List<ManageLandslidePoint>> fetchListLandslidePoints() async {
+    final results = await connection.query('''
+      SELECT 
+        id, 
+        ST_X(
+          CASE 
+            WHEN ST_GeometryType(geom) = 'ST_Point' THEN geom
+            ELSE ST_Centroid(geom)
+          END
+        ) as lon, 
+        ST_Y(
+          CASE 
+            WHEN ST_GeometryType(geom) = 'ST_Point' THEN geom
+            ELSE ST_Centroid(geom)
+          END
+        ) as lat,
+        commune_id,
+        vi_tri,
+        mo_ta
+      FROM public.landslides
+      ORDER BY id
+    ''');
+
+    return results
+        .map((row) => ManageLandslidePoint(
+              id: row[0].toString(),
+              name: row[4] as String? ?? 'Không có tên',
+              code: row[3]?.toString() ?? 'Không có mã',
+              latitude: row[2] as double,
+              longitude: row[1] as double,
+              description: row[5] as String? ?? 'Không có mô tả',
+            ))
+        .toList();
+  }
 }
