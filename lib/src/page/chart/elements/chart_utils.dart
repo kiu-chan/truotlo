@@ -63,6 +63,55 @@ class ChartUtils {
       titlesData: _getTitlesData(selectedChart, filteredData),
       gridData: const FlGridData(show: true),
       borderData: FlBorderData(show: true),
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          // tooltipBgColor: Colors.blueGrey.withOpacity(0.8),
+          getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+            return touchedBarSpots.map((barSpot) {
+              final flSpot = barSpot;
+              if (flSpot.x == -1 || flSpot.y == -1) {
+                return null;
+              }
+              
+              // Get the corresponding date for the x-value
+              DateTime date = chartDataList[0].dates[flSpot.x.toInt()];
+              String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
+              
+              // Format the tooltip text
+              String tooltipText = '$formattedDate: (${flSpot.x}, ${flSpot.y})';
+              
+              return LineTooltipItem(
+                tooltipText,
+                const TextStyle(color: Colors.white, fontSize: 12),
+              );
+            }).toList();
+          },
+          tooltipPadding: const EdgeInsets.all(8),
+          fitInsideHorizontally: true,
+          fitInsideVertically: true,
+        ),
+        touchCallback: (FlTouchEvent event, LineTouchResponse? touchResponse) {
+          // Custom touch callback if needed
+        },
+        handleBuiltInTouches: true,
+        getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
+          return spotIndexes.map((spotIndex) {
+            return TouchedSpotIndicatorData(
+              FlLine(color: Colors.white, strokeWidth: 2),
+              FlDotData(
+                getDotPainter: (spot, percent, barData, index) {
+                  return FlDotCirclePainter(
+                    radius: 4,
+                    color: Colors.white,
+                    strokeWidth: 2,
+                    // strokeColor: barData.color,
+                  );
+                },
+              ),
+            );
+          }).toList();
+        },
+      ),
     );
   }
 
@@ -288,5 +337,23 @@ class ChartUtils {
         ),
       ),
     );
+  }
+
+  static String _getLineName(String selectedChart, int lineIndex) {
+    if ([
+      'Piezometer 1',
+      'Piezometer 2',
+      'Crackmeter 1',
+      'Crackmeter 2',
+      'Crackmeter 3'
+    ].contains(selectedChart)) {
+      return selectedChart;
+    } else {
+      if (lineIndex == -1) {
+        return 'Giá trị mặc định';
+      } else {
+        return 'Đường ${lineIndex + 1}';
+      }
+    }
   }
 }

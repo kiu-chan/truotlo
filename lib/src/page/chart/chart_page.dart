@@ -193,7 +193,7 @@ class ChartPageState extends State<ChartPage> {
                       ),
                       const SizedBox(height: 10),
                       SizedBox(
-                        height: 200, // Adjust this value as needed
+                        height: 400, // Adjust this value as needed
                         child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
