@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:truotlo/src/data/chart/chart_data.dart';
 import 'package:truotlo/src/data/chart/landslide_data.dart';
-import 'package:truotlo/src/page/chart/chart_menu.dart';
-import 'chart_data_processor.dart';
-import 'chart_utils.dart';
+import 'package:truotlo/src/page/chart/elements/chart_menu.dart';
+import 'elements/chart_data_processor.dart';
+import 'elements/chart_utils.dart';
 
 class ChartPage extends StatefulWidget {
   const ChartPage({super.key});
@@ -142,56 +142,77 @@ class ChartPageState extends State<ChartPage> {
     }
     return RefreshIndicator(
       onRefresh: _fetchData,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _selectedChart,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _selectDateTimeRange,
-                  child: Text(ChartUtils.getDateRangeText(
-                      _startDateTime, _endDateTime)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              AspectRatio(
-                aspectRatio: 1.5,
-                child: LineChart(
-                  ChartUtils.getLineChartData(
-                    _selectedChart,
-                    _chartDataList,
-                    _lineVisibility,
-                    _filteredData,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedChart,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              if (_showLegend) ...[
                 const SizedBox(height: 20),
-                const Text(
-                  'Chú thích:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                ...ChartUtils.buildLegendItems(
-                  _selectedChart,
-                  _lineVisibility,
-                  _chartDataList,
-                  _toggleLineVisibility,
+                Center(
+                  child: ElevatedButton(
+                    onPressed: _selectDateTimeRange,
+                    child: Text(ChartUtils.getDateRangeText(
+                        _startDateTime, _endDateTime)),
+                  ),
                 ),
               ],
-            ],
+            ),
           ),
-        ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 1.5,
+                      child: LineChart(
+                        ChartUtils.getLineChartData(
+                          _selectedChart,
+                          _chartDataList,
+                          _lineVisibility,
+                          _filteredData,
+                        ),
+                      ),
+                    ),
+                    if (_showLegend) ...[
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Chú thích:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 200, // Adjust this value as needed
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: ChartUtils.buildLegendItems(
+                              _selectedChart,
+                              _lineVisibility,
+                              _chartDataList,
+                              _toggleLineVisibility,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
