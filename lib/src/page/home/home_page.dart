@@ -36,6 +36,8 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchWeatherData() async {
+    if (!mounted) return; // Kiểm tra xem widget còn mounted không
+
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -50,12 +52,19 @@ class HomePageState extends State<HomePage> {
         selectedWard.latitude,
         selectedWard.longitude,
       );
+
+      if (!mounted)
+        return; // Kiểm tra lại sau khi các hoạt động bất đồng bộ hoàn thành
+
       setState(() {
         currentWeather = weatherData;
         forecast = forecastData;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted)
+        return; // Kiểm tra lại trước khi set state trong trường hợp lỗi
+
       setState(() {
         errorMessage = 'Không thể tải dữ liệu thời tiết. Vui lòng thử lại sau.';
         isLoading = false;

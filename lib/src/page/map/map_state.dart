@@ -600,10 +600,16 @@ void changeMapStyle(String? style) {
   }
 
   // Phương thức hiển thị thông báo lỗi
-  void showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+void showErrorSnackBar(String message) {
+  if (mounted) {  // Kiểm tra xem widget còn được mount hay không
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message))
+    );
+  } else {
+    // Xử lý trường hợp widget đã bị unmount
+    print('Không thể hiển thị SnackBar: $message');
   }
+}
 
   @override
   void dispose() {
