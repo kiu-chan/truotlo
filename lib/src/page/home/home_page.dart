@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:truotlo/src/data/weather/weather_district.dart';
-import 'package:truotlo/src/page/home/elements/warning.dart';
-import 'package:truotlo/src/page/home/elements/weather_forecast_card.dart';
-import 'package:truotlo/src/page/home/elements/landslide_forecast_card.dart'; // New import
-import 'elements/weather_service.dart';
+import 'package:truotlo/src/page/home/elements/landslide/warning.dart';
+import 'package:truotlo/src/page/home/elements/weather/weather_forecast_card.dart';
+import 'package:truotlo/src/page/home/elements/landslide/landslide_forecast_card.dart'; // New import
+import 'elements/weather/weather_service.dart';
 import '../../data/weather/location_data.dart';
 import 'package:truotlo/src/config/weather.dart';
 
