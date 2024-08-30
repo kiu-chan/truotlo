@@ -12,20 +12,22 @@ class LandslideDatabase {
   Future<List<LandslidePoint>> fetchLandslidePoints() async {
     final results = await connection.query('''
       SELECT 
-        id, 
+        l.id, 
         ST_X(
           CASE 
-            WHEN ST_GeometryType(geom) = 'ST_Point' THEN geom
-            ELSE ST_Centroid(geom)
+            WHEN ST_GeometryType(l.geom) = 'ST_Point' THEN l.geom
+            ELSE ST_Centroid(l.geom)
           END
         ) as lon, 
         ST_Y(
           CASE 
-            WHEN ST_GeometryType(geom) = 'ST_Point' THEN geom
-            ELSE ST_Centroid(geom)
+            WHEN ST_GeometryType(l.geom) = 'ST_Point' THEN l.geom
+            ELSE ST_Centroid(l.geom)
           END
-        ) as lat 
-      FROM public.landslides
+        ) as lat,
+        d.ten_huyen as district
+      FROM public.landslides l
+      JOIN public.map_districts d ON ST_Intersects(d.geom, l.geom)
     ''');
 
     return results
@@ -33,6 +35,7 @@ class LandslideDatabase {
               'id': row[0] as int,
               'lon': row[1] as double,
               'lat': row[2] as double,
+              'district': row[3] as String,
             }))
         .toList();
   }
@@ -241,5 +244,16 @@ class LandslideDatabase {
               description: row[5] as String? ?? 'Không có mô tả',
             ))
         .toList();
+  }
+
+  Future<List<String>> getAllDistricts() async {
+    final results = await connection.query('''
+      SELECT DISTINCT d.ten_huyen
+      FROM public.landslides l
+      JOIN public.map_districts d ON ST_Intersects(d.geom, l.geom)
+      ORDER BY d.ten_huyen
+    ''');
+
+    return results.map((row) => row[0] as String).toList();
   }
 }

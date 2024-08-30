@@ -33,10 +33,12 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   bool isCommunesVisible = false;
   bool isLandslidePointsVisible = true;
   List<District> districts = [];
+  Set<String> allDistricts = {};
   List<List<LatLng>> borderPolygons = [];
   List<Commune> communes = [];
   List<LandslidePoint> landslidePoints = [];
   Map<int, bool> districtVisibility = {};
+  Map<String, bool> districtLandslideVisibility = {};
 
   int? _currentSearchId;
 
@@ -49,6 +51,13 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   bool isLandslidePointsLoaded = false;
 
   bool _isMapInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    connectToDatabase();
+    initializeLocationService();
+  }
 
   // Phương thức khởi tạo kết nối đến cơ sở dữ liệu
   Future<void> connectToDatabase() async {
@@ -132,15 +141,36 @@ mixin MapState<T extends StatefulWidget> on State<T> {
       try {
         landslidePoints = await database.fetchLandslidePoints();
         isLandslidePointsLoaded = true;
+        
+        // Initialize district visibility
+        allDistricts = landslidePoints.map((point) => point.district).toSet();
+        districtLandslideVisibility = {for (var district in allDistricts) district: true};
+        
         setState(() {});
         if (_isMapInitialized) {
           await _mapUtils.drawLandslidePointsOnMap(landslidePoints);
+          _updateLandslidePointsVisibility();
         }
       } catch (e) {
-        print('Lỗi khi lấy dữ liệu điểm trượt lở: $e');
-        showErrorSnackBar(
-            'Không thể tải dữ liệu điểm trượt lở. Vui lòng thử lại sau.');
+        print('Error fetching landslide points: $e');
+        showErrorSnackBar('Unable to load landslide point data. Please try again later.');
       }
+    }
+  }
+
+
+  void toggleDistrictLandslideVisibility(String district, bool? value) {
+    if (value != null) {
+      setState(() {
+        districtLandslideVisibility[district] = value;
+      });
+      _updateLandslidePointsVisibility();
+    }
+  }
+
+  void _updateLandslidePointsVisibility() {
+    if (_isMapInitialized) {
+      _mapUtils.updateLandslidePointsVisibility(landslidePoints, districtLandslideVisibility);
     }
   }
 

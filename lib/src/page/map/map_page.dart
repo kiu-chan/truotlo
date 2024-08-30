@@ -34,12 +34,14 @@ class MapboxPageState extends State<MapboxPage> with MapState {
         isLandslidePointsVisible: isLandslidePointsVisible,
         districts: districts,
         districtVisibility: districtVisibility,
+        districtLandslideVisibility: districtLandslideVisibility,
         onStyleChanged: changeMapStyle,
         onDistrictsVisibilityChanged: toggleDistrictsVisibility,
         onBorderVisibilityChanged: toggleBorderVisibility,
         onCommunesVisibilityChanged: toggleCommunesVisibility,
         onLandslidePointsVisibilityChanged: toggleLandslidePointsVisibility,
-        onDistrictVisibilityChanged: toggleDistrictVisibility,
+        onDistrictVisibilityChanged: toggleDistrictVisibility,  
+        onDistrictLandslideVisibilityChanged: toggleDistrictLandslideVisibility,
       ),
       body: Stack(
         children: [

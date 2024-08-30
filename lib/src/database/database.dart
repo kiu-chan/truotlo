@@ -80,4 +80,8 @@ class DefaultDatabase {
   Future<List<ManageLandslidePoint>> fetchListLandslidePoints() async {
     return await landslideDatabase.fetchListLandslidePoints();
   }
+
+  Future<List<String>> getAllDistricts() async {
+    return await landslideDatabase.getAllDistricts();
+  }
 }

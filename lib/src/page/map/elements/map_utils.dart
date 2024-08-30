@@ -197,30 +197,53 @@ class MapUtils {
     }
   }
 
-Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
-  await clearLandslidePointsOnMap();
-
-  // Đảm bảo hình ảnh đã được thêm vào bản đồ
-  await _mapController.addImage("location_on", await _loadImageFromAsset('lib/assets/landslide.png'));
-
-  for (var point in points) {
-    try {
-      Symbol symbol = await _mapController.addSymbol(
-        SymbolOptions(
-          geometry: point.location,
-          iconImage: 'location_on',
-          iconSize: 0.15,
-          iconColor: '#FF0000',
-          zIndex: 99,
-        ),
-        {'id': point.id},
-      );
-      _drawnLandslidePoints.add(symbol);
-    } catch (e) {
-      print('Error drawing landslide point: $e');
+  Future<void> updateLandslidePointsVisibility(
+    List<LandslidePoint> points,
+    Map<String, bool> districtVisibility
+  ) async {
+    for (var symbol in _drawnLandslidePoints) {
+      try {
+        final pointData = symbol.data;
+        if (pointData != null && pointData['district'] != null) {
+          final district = pointData['district'] as String;
+          final isVisible = districtVisibility[district] ?? true;
+          await _mapController.updateSymbol(
+            symbol,
+            SymbolOptions(iconOpacity: isVisible ? 1.0 : 0.0),
+          );
+        }
+      } catch (e) {
+        print('Error updating landslide point visibility: $e');
+      }
     }
   }
-}
+
+  Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
+    await clearLandslidePointsOnMap();
+
+    await _mapController.addImage("location_on", await _loadImageFromAsset('lib/assets/landslide.png'));
+
+    for (var point in points) {
+      try {
+        Symbol symbol = await _mapController.addSymbol(
+          SymbolOptions(
+            geometry: point.location,
+            iconImage: 'location_on',
+            iconSize: 0.15,
+            iconColor: '#FF0000',
+            zIndex: 99,
+          ),
+          {
+            'id': point.id,
+            'district': point.district, // Add this line
+          },
+        );
+        _drawnLandslidePoints.add(symbol);
+      } catch (e) {
+        print('Error drawing landslide point: $e');
+      }
+    }
+  }
 
 // Thêm phương thức này vào lớp MapUtils
 Future<Uint8List> _loadImageFromAsset(String assetName) async {
