@@ -141,11 +141,13 @@ mixin MapState<T extends StatefulWidget> on State<T> {
       try {
         landslidePoints = await database.fetchLandslidePoints();
         isLandslidePointsLoaded = true;
-        
+
         // Initialize district visibility
         allDistricts = landslidePoints.map((point) => point.district).toSet();
-        districtLandslideVisibility = {for (var district in allDistricts) district: true};
-        
+        districtLandslideVisibility = {
+          for (var district in allDistricts) district: true
+        };
+
         setState(() {});
         if (_isMapInitialized) {
           await _mapUtils.drawLandslidePointsOnMap(landslidePoints);
@@ -153,11 +155,11 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         }
       } catch (e) {
         print('Error fetching landslide points: $e');
-        showErrorSnackBar('Unable to load landslide point data. Please try again later.');
+        showErrorSnackBar(
+            'Unable to load landslide point data. Please try again later.');
       }
     }
   }
-
 
   void toggleDistrictLandslideVisibility(String district, bool? value) {
     if (value != null) {
@@ -170,7 +172,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
 
   void _updateLandslidePointsVisibility() {
     if (_isMapInitialized) {
-      _mapUtils.updateLandslidePointsVisibility(landslidePoints, districtLandslideVisibility);
+      _mapUtils.updateLandslidePointsVisibility(
+          landslidePoints, districtLandslideVisibility);
     }
   }
 
@@ -179,10 +182,6 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     mapController = controller;
     _mapUtils = MapUtils(mapController);
     _isMapInitialized = true;
-
-    final ByteData bytes = await rootBundle.load('lib/assets/landslide.png');
-    final Uint8List list = bytes.buffer.asUint8List();
-    await mapController.addImage("location_on", list);
 
     await _initializeData();
 
@@ -200,6 +199,12 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     if (isCommunesVisible && isCommunesLoaded) {
       await _mapUtils.drawCommunesOnMap(communes);
     }
+
+    // Thêm hình ảnh cho điểm trượt lở
+    final ByteData bytes = await rootBundle.load('lib/assets/landslide.png');
+    final Uint8List list = bytes.buffer.asUint8List();
+    await mapController.addImage("location_on", list);
+
     if (isLandslidePointsVisible && isLandslidePointsLoaded) {
       await _mapUtils.clearLandslidePointsOnMap();
       await _mapUtils.drawLandslidePointsOnMap(landslidePoints);
@@ -548,20 +553,20 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   }
 
   // Phương thức thay đổi style bản đồ
-void changeMapStyle(String? style) {
-  if (style != null) {
-    setState(() {
-      currentStyle = style;
-    });
-    // Vẽ lại các điểm trượt lở sau khi thay đổi style
-    if (isLandslidePointsVisible && isLandslidePointsLoaded) {
-      _mapUtils.clearLandslidePointsOnMap().then((_) {
-        _mapUtils.drawLandslidePointsOnMap(landslidePoints);
+  void changeMapStyle(String? style) {
+    if (style != null) {
+      setState(() {
+        currentStyle = style;
       });
+      // Vẽ lại các điểm trượt lở sau khi thay đổi style
+      if (isLandslidePointsVisible && isLandslidePointsLoaded) {
+        _mapUtils.clearLandslidePointsOnMap().then((_) {
+          _mapUtils.drawLandslidePointsOnMap(landslidePoints);
+        });
+      }
+      Navigator.pop(context);
     }
-    Navigator.pop(context);
   }
-}
 
   // Phương thức di chuyển đến vị trí hiện tại
   void moveToCurrentLocation() {
@@ -600,16 +605,16 @@ void changeMapStyle(String? style) {
   }
 
   // Phương thức hiển thị thông báo lỗi
-void showErrorSnackBar(String message) {
-  if (mounted) {  // Kiểm tra xem widget còn được mount hay không
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message))
-    );
-  } else {
-    // Xử lý trường hợp widget đã bị unmount
-    print('Không thể hiển thị SnackBar: $message');
+  void showErrorSnackBar(String message) {
+    if (mounted) {
+      // Kiểm tra xem widget còn được mount hay không
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } else {
+      // Xử lý trường hợp widget đã bị unmount
+      print('Không thể hiển thị SnackBar: $message');
+    }
   }
-}
 
   @override
   void dispose() {
