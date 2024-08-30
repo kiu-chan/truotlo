@@ -150,7 +150,7 @@ class LandslideDatabase {
         district: '',
         commune: '',
         startDate: DateTime(row[1], row[2], 1),
-        endDate: DateTime(row[1], row[2] + 1, 0).subtract(Duration(days: 1)),
+        endDate: DateTime(row[1], row[2] + 1, 0).subtract(const Duration(days: 1)),
         days: [],
       );
     }).toList();

@@ -3,7 +3,7 @@ import 'package:truotlo/src/database/account.dart';
 import 'package:truotlo/src/database/database.dart';
 import 'package:truotlo/src/page/account/register/register_page.dart';
 import 'package:truotlo/src/select_page.dart';
-import 'package:truotlo/src/user/authService.dart';
+import 'package:truotlo/src/user/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

@@ -69,6 +69,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - lib/assets/report/
     - lib/assets/clouds/
     - lib/assets/location_icon.png
     - lib/assets/landslide.png

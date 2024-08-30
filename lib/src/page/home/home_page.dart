@@ -53,8 +53,9 @@ class HomePageState extends State<HomePage> {
         selectedWard.longitude,
       );
 
-      if (!mounted)
+      if (!mounted) {
         return; // Kiểm tra lại sau khi các hoạt động bất đồng bộ hoàn thành
+      }
 
       setState(() {
         currentWeather = weatherData;
@@ -62,8 +63,9 @@ class HomePageState extends State<HomePage> {
         isLoading = false;
       });
     } catch (e) {
-      if (!mounted)
+      if (!mounted) {
         return; // Kiểm tra lại trước khi set state trong trường hợp lỗi
+      }
 
       setState(() {
         errorMessage = 'Không thể tải dữ liệu thời tiết. Vui lòng thử lại sau.';

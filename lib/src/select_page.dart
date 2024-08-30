@@ -4,7 +4,7 @@ import 'package:truotlo/src/page/chart/chart_page.dart';
 import 'package:truotlo/src/page/map/map_page.dart';
 import 'package:truotlo/src/page/mangage/manage_page.dart';
 import 'package:truotlo/src/page/settings/settings_page.dart';
-import 'package:truotlo/src/user/authService.dart';
+import 'package:truotlo/src/user/auth_service.dart';
 
 class SelectPage extends StatefulWidget {
   const SelectPage({super.key});

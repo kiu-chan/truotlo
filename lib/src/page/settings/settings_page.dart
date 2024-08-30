@@ -3,7 +3,7 @@ import 'package:truotlo/src/page/account/login/login_page.dart';
 import 'package:truotlo/src/page/settings/information_page.dart';
 import 'package:truotlo/src/page/settings/send_request_page.dart';
 import 'package:truotlo/src/select_page.dart';
-import 'package:truotlo/src/user/authService.dart';
+import 'package:truotlo/src/user/auth_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
