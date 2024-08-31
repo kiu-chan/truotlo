@@ -46,10 +46,11 @@ class LoginPageState extends State<LoginPage> {
         if (user != null) {
           // Save user information
           await UserPreferences.saveUser(user.name, user.email, user.role);
-          
+
           if (!mounted) return;
-          Navigator.of(context).pushReplacement(
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const SelectPage()),
+            (Route<dynamic> route) => false,
           );
         } else {
           setState(() {
@@ -159,17 +160,17 @@ class LoginPageState extends State<LoginPage> {
                         )
                       : const Text('Đăng nhập'),
                 ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const RegisterPage()),
-                    );
-                  },
-                  child: const Text('Chưa có tài khoản? Đăng ký ngay'),
-                ),
+                // const SizedBox(height: 16),
+                // TextButton(
+                //   onPressed: () {
+                //     Navigator.push(
+                //       context,
+                //       MaterialPageRoute(
+                //           builder: (context) => const RegisterPage()),
+                //     );
+                //   },
+                //   child: const Text('Chưa có tài khoản? Đăng ký ngay'),
+                // ),
               ],
             ),
           ),

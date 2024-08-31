@@ -27,15 +27,22 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
             ),
             const SizedBox(height: 8),
             const Text('Cập nhật lúc: 15:00 30/08/2024'),
-            const Text('(Thông tin dự báo chi tiết theo giờ đến cấp xã, liên hệ e-mail: quynhdtgeo@gmail.com hoặc contact@igevn.com)'),
+            const Text(
+                '(Thông tin dự báo chi tiết theo giờ đến cấp xã, liên hệ e-mail: quynhdtgeo@gmail.com hoặc contact@igevn.com)'),
             const SizedBox(height: 16),
             _buildToggleButtons(),
             const SizedBox(height: 16),
-            _showHourlyForecast ? _buildHourlyForecastTable() : _buildDailyForecastTable(),
+            _showHourlyForecast
+                ? _buildHourlyForecastTable()
+                : _buildDailyForecastTable(),
             const SizedBox(height: 16),
-            _showHourlyForecast ? buildHourlyLegend(context) : buildDailyLegend(context),
+            _showHourlyForecast
+                ? buildHourlyLegend(context)
+                : buildDailyLegend(context),
             const SizedBox(height: 8),
-            const Text('Các huyện không có trong danh sách không có nguy cơ trượt lở', style: TextStyle(fontStyle: FontStyle.italic)),
+            const Text(
+                'Các huyện không có trong danh sách không có nguy cơ trượt lở',
+                style: TextStyle(fontStyle: FontStyle.italic)),
           ],
         ),
       ),
@@ -53,11 +60,11 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
       children: const [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Theo giờ'),
+          child: Text('Theo giờ', style: TextStyle(color: Colors.blue)),
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Theo ngày'),
+          child: Text('Theo ngày', style: TextStyle(color: Colors.blue)),
         ),
       ],
     );
@@ -76,13 +83,69 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         6: FlexColumnWidth(1),
       },
       children: [
-        buildTableRow(['STT', 'Tỉnh', 'Huyện', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'], isHeader: true),
-        buildTableRow(['1', 'Bình Định', 'An Lão', 'Đá Cạnh', buildRiskIcon('no_risk'), buildRiskIcon('no_risk'), buildRiskIcon('very_high')]),
-        buildTableRow(['2', 'Bình Định8', 'An Lão8', 'Đá Cạnh8', buildRiskIcon('no_risk'), buildRiskIcon('no_risk'), buildRiskIcon('very_high')]),
-        buildTableRow(['3', 'Bình Định9', 'An Lão9', 'Cống Chào9', buildRiskIcon('no_risk'), buildRiskIcon('no_risk'), buildRiskIcon('very_high')]),
-        buildTableRow(['4', 'Bình Định30', 'An Lão30', 'Đá Cạnh30', buildRiskIcon('no_risk'), buildRiskIcon('no_risk'), buildRiskIcon('very_high')]),
-        buildTableRow(['5', 'Bình Định31', 'An Lão31', 'Đá Cạnh31', buildRiskIcon('no_risk'), buildRiskIcon('no_risk'), buildRiskIcon('very_high')]),
-        buildTableRow(['6', 'Bình Định32', 'An Lão32', 'Đá Cạnh32', buildRiskIcon('no_risk'), buildRiskIcon('no_risk'), buildRiskIcon('very_high')]),
+        buildTableRow([
+          'STT',
+          'Tỉnh',
+          'Huyện',
+          'Vị trí',
+          'Lũ quét',
+          'Trượt nông',
+          'Trượt lớn'
+        ], isHeader: true),
+        buildTableRow([
+          '1',
+          'Bình Định',
+          'An Lão',
+          'Đá Cạnh',
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('very_high')
+        ]),
+        buildTableRow([
+          '2',
+          'Bình Định8',
+          'An Lão8',
+          'Đá Cạnh8',
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('very_high')
+        ]),
+        buildTableRow([
+          '3',
+          'Bình Định9',
+          'An Lão9',
+          'Cống Chào9',
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('very_high')
+        ]),
+        buildTableRow([
+          '4',
+          'Bình Định30',
+          'An Lão30',
+          'Đá Cạnh30',
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('very_high')
+        ]),
+        buildTableRow([
+          '5',
+          'Bình Định31',
+          'An Lão31',
+          'Đá Cạnh31',
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('very_high')
+        ]),
+        buildTableRow([
+          '6',
+          'Bình Định32',
+          'An Lão32',
+          'Đá Cạnh32',
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('very_high')
+        ]),
       ],
     );
   }
@@ -100,10 +163,36 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         6: FlexColumnWidth(1),
       },
       children: [
-        buildTableRow(['TT', 'Huyện', '26/08', '27/08', '28/08', '29/08', '30/08'], isHeader: true),
-        buildTableRow(['1', 'An Lão', buildColorDot(0), buildColorDot(0), buildColorDot(0), buildColorDot(0), buildColorDot(0)]),
-        buildTableRow(['2', 'An Lão1', buildColorDot(0), buildColorDot(0), buildColorDot(0), buildColorDot(0), buildColorDot(0)]),
-        buildTableRow(['3', 'An Lão12', buildColorDot(0), buildColorDot(0), buildColorDot(0), buildColorDot(0), buildColorDot(0)]),
+        buildTableRow(
+            ['TT', 'Huyện', '26/08', '27/08', '28/08', '29/08', '30/08'],
+            isHeader: true),
+        buildTableRow([
+          '1',
+          'An Lão',
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0)
+        ]),
+        buildTableRow([
+          '2',
+          'An Lão1',
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0)
+        ]),
+        buildTableRow([
+          '3',
+          'An Lão12',
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0),
+          buildColorDot(0)
+        ]),
       ],
     );
   }

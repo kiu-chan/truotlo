@@ -119,10 +119,10 @@ class SettingsPageState extends State<SettingsPage> {
                             const SnackBar(
                                 content: Text('Logged out successfully')),
                           );
-                          await Navigator.push(
-                            context,
+                          await Navigator.of(context).pushAndRemoveUntil(
                             MaterialPageRoute(
                                 builder: (context) => const SelectPage()),
+                            (Route<dynamic> route) => false,
                           );
                         },
                       )
