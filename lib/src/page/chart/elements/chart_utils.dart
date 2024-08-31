@@ -74,11 +74,11 @@ class ChartUtils {
               }
               
               // Get the corresponding date for the x-value
-              DateTime date = chartDataList[0].dates[flSpot.x.toInt()];
-              String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
+              // DateTime date = chartDataList[0].dates[flSpot.x.toInt()];
+              // String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
               
               // Format the tooltip text
-              String tooltipText = '$formattedDate: (${flSpot.x}, ${flSpot.y})';
+              String tooltipText = '(${flSpot.x}, ${flSpot.y})';
               
               return LineTooltipItem(
                 tooltipText,
