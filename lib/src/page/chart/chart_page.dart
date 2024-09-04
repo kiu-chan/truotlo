@@ -112,6 +112,7 @@ class ChartPageState extends State<ChartPage> {
           'Biểu đồ',
           style: TextStyle(color: Colors.white),
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.blue,
       ),
       endDrawer: ChartMenu(
@@ -159,12 +160,27 @@ class ChartPageState extends State<ChartPage> {
                 ),
                 const SizedBox(height: 20),
                 Center(
-                  child: ElevatedButton(
-                    onPressed: _selectDateTimeRange,
-                    child: Text(ChartUtils.getDateRangeText(
-                        _startDateTime, _endDateTime)),
+                    child: ElevatedButton(
+                  onPressed: _selectDateTimeRange,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.blue,
+                    foregroundColor:
+                        Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 5,
                   ),
-                ),
+                  child: Text(
+                    ChartUtils.getDateRangeText(_startDateTime, _endDateTime),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )),
               ],
             ),
           ),

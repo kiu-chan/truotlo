@@ -24,6 +24,7 @@ class MapboxPageState extends State<MapboxPage> with MapState {
       appBar: AppBar(
         title: const Text('Bản đồ', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       endDrawer: MapMenu(
         styleCategories: styleCategories,
@@ -40,7 +41,7 @@ class MapboxPageState extends State<MapboxPage> with MapState {
         onBorderVisibilityChanged: toggleBorderVisibility,
         onCommunesVisibilityChanged: toggleCommunesVisibility,
         onLandslidePointsVisibilityChanged: toggleLandslidePointsVisibility,
-        onDistrictVisibilityChanged: toggleDistrictVisibility,  
+        onDistrictVisibilityChanged: toggleDistrictVisibility,
         onDistrictLandslideVisibilityChanged: toggleDistrictLandslideVisibility,
       ),
       body: Stack(

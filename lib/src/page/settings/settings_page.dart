@@ -43,7 +43,8 @@ class SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('Settings', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.blue,
       ),
       body: RefreshIndicator(
         onRefresh: _loadUserData,
@@ -81,9 +82,9 @@ class SettingsPageState extends State<SettingsPage> {
                         ),
                       )
                     : const ListTile(
-                        title: Text('Please log in to view your information'),
-                        subtitle: Text(
-                            'Tap the login button below to access your account'),
+                        title: Text('Đăng nhập để xem thông tin chi tiết'),
+                        subtitle:
+                            Text('Click vào nút Login ở dưới để đăng nhập'),
                       ),
                 const Divider(),
                 const SizedBox(height: 16),

@@ -7,7 +7,9 @@ class InformationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thông tin'),
+        title: const Text('Thông tin', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.blue,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -24,13 +26,14 @@ class InformationPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildBulletPoint('Huyện Hoài Ân có 4 điểm'),
-            _buildBulletPoint('Huyện An Lão còn có 3 điểm nguy cơ trượt lở ảnh hưởng đến tính mạng và tài sản người dân'),
+            _buildBulletPoint(
+                'Huyệsn An Lão còn có 3 điểm nguy cơ trượt lở ảnh hưởng đến tính mạng và tài sản người dân'),
             _buildBulletPoint('Huyện Vĩnh Thạnh có 2 điểm'),
             _buildBulletPoint('Huyện Phù Cát có 2 điểm'),
             _buildBulletPoint('Thành phố Quy Nhơn'),
             const SizedBox(height: 16),
             const Text(
-              'Các khu vực mới phát sinh tại biển trượt lở đã ít nhiều gây khó khăn và bất ngờ với chính quyền và người dân địa phương. Dưới ảnh hưởng của sự gia tăng các hoạt động nhân sinh trên sườn dốc, xây dựng và mở rộng các tuyến giao thông, khai thác vật liệu xây dựng, tai biến trượt lở đất, đá có khả năng tăng cao trong thời gian tới tại tỉnh Bình Định.',
+              'Các khu vực mới phát inh tại biển trượt lở đã ít nhiều gây khó khăn và bất ngờ với chính quyền và người dân địa phương. Dưới ảnh hưởng của sự gia tăng các hoạt động nhân sinh trên sườn dốc, xây dựng và mở rộng các tuyến giao thông, khai thác vật liệu xây dựng, tai biến trượt lở đất, đá có khả năng tăng cao trong thời gian tới tại tỉnh Bình Định.',
             ),
             const SizedBox(height: 16),
             const Text(
@@ -52,7 +55,8 @@ class InformationPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('• ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text('• ',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           Expanded(child: Text(text)),
         ],
       ),

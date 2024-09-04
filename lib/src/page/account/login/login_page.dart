@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:truotlo/src/database/account.dart';
 import 'package:truotlo/src/database/database.dart';
-import 'package:truotlo/src/page/account/register/register_page.dart';
 import 'package:truotlo/src/select_page.dart';
 import 'package:truotlo/src/user/auth_service.dart';
 
@@ -146,7 +145,18 @@ class LoginPageState extends State<LoginPage> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 3,
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -159,18 +169,7 @@ class LoginPageState extends State<LoginPage> {
                           ),
                         )
                       : const Text('Đăng nhập'),
-                ),
-                // const SizedBox(height: 16),
-                // TextButton(
-                //   onPressed: () {
-                //     Navigator.push(
-                //       context,
-                //       MaterialPageRoute(
-                //           builder: (context) => const RegisterPage()),
-                //     );
-                //   },
-                //   child: const Text('Chưa có tài khoản? Đăng ký ngay'),
-                // ),
+                )
               ],
             ),
           ),
