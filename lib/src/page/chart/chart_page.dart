@@ -167,7 +167,7 @@ class ChartPageState extends State<ChartPage> {
                         Colors.blue,
                     foregroundColor:
                         Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -175,7 +175,7 @@ class ChartPageState extends State<ChartPage> {
                   ),
                   child: Text(
                     ChartUtils.getDateRangeText(_startDateTime, _endDateTime),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),

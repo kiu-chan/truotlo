@@ -97,7 +97,7 @@ class ChartUtils {
         getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
           return spotIndexes.map((spotIndex) {
             return TouchedSpotIndicatorData(
-              FlLine(color: Colors.white, strokeWidth: 2),
+              const FlLine(color: Colors.white, strokeWidth: 2),
               FlDotData(
                 getDotPainter: (spot, percent, barData, index) {
                   return FlDotCirclePainter(
@@ -339,21 +339,4 @@ class ChartUtils {
     );
   }
 
-  static String _getLineName(String selectedChart, int lineIndex) {
-    if ([
-      'Piezometer 1',
-      'Piezometer 2',
-      'Crackmeter 1',
-      'Crackmeter 2',
-      'Crackmeter 3'
-    ].contains(selectedChart)) {
-      return selectedChart;
-    } else {
-      if (lineIndex == -1) {
-        return 'Giá trị mặc định';
-      } else {
-        return 'Đường ${lineIndex + 1}';
-      }
-    }
-  }
 }

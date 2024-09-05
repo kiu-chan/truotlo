@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SendRequestPage extends StatefulWidget {
-  const SendRequestPage({Key? key}) : super(key: key);
+  const SendRequestPage({super.key});
 
   @override
   SendRequestPageState createState() => SendRequestPageState();
