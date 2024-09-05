@@ -1,61 +1,76 @@
-import 'package:postgres/postgres.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:mapbox_gl/mapbox_gl.dart';
 
 class Commune {
   final int id;
+  final String name;
+  final String districtName;
+  final String provinceName;
   final List<List<LatLng>> polygons;
 
-  Commune(this.id, this.polygons);
+  Commune(this.id, this.name, this.districtName, this.provinceName, this.polygons);
 }
 
 class CommuneDatabase {
-  final PostgreSQLConnection connection;
-
-  CommuneDatabase(this.connection);
+  final String baseUrl = 'https://truotlobinhdinh.girc.edu.vn/api';
 
   Future<List<Commune>> fetchCommunesData() async {
-    final results = await connection.query(
-      "SELECT id, ST_AsText(geom) as geom FROM public.map_communes"
-    );
-    
-    List<Commune> communes = [];
-    
-    for (final row in results) {
-      int id = row[0] as int;
-      String wktGeometry = row[1] as String;
-      List<List<LatLng>> polygons = _parseMultiPolygon(wktGeometry);
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/communes-data'));
       
-      communes.add(Commune(id, polygons));
+      if (response.statusCode == 200) {
+        List<dynamic> jsonResponse = json.decode(response.body);
+        return jsonResponse.map((data) {
+          try {
+            return Commune(
+              data['id'],
+              data['name'],
+              data['district_name'],
+              data['province_name'],
+              _parseMultiPolygon(data['geometry'])
+            );
+          } catch (e) {
+            print('Error parsing commune data: $e');
+            return null;
+          }
+        }).whereType<Commune>().toList();
+      } else {
+        throw Exception('Failed to load communes data. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching communes data: $e');
+      rethrow;
     }
-    
-    return communes;
   }
 
-  List<List<LatLng>> _parseMultiPolygon(String wktGeometry) {
+  List<List<LatLng>> _parseMultiPolygon(Map<String, dynamic> geometry) {
     List<List<LatLng>> polygons = [];
-    if (wktGeometry.startsWith('MULTIPOLYGON')) {
-      wktGeometry = wktGeometry.substring(15, wktGeometry.length - 3);
-      List<String> polygonStrings = wktGeometry.split(')),((');
-      
-      for (String polygonString in polygonStrings) {
-        List<LatLng> polygon = _parsePolygon(polygonString);
-        polygons.add(polygon);
+    try {
+      if (geometry['type'] == 'MultiPolygon') {
+        for (var polygon in geometry['coordinates']) {
+          polygons.add(_parsePolygon(polygon[0]));
+        }
+      } else if (geometry['type'] == 'Polygon') {
+        polygons.add(_parsePolygon(geometry['coordinates'][0]));
       }
+    } catch (e) {
+      print('Error parsing MultiPolygon: $e');
     }
     return polygons;
   }
 
-  List<LatLng> _parsePolygon(String polygonString) {
-    List<LatLng> points = [];
-    List<String> coordinates = polygonString.replaceAll('(', '').replaceAll(')', '').split(',');
-    
-    for (String coord in coordinates) {
-      List<String> latLng = coord.trim().split(' ');
-      double lng = double.parse(latLng[0]);
-      double lat = double.parse(latLng[1]);
-      points.add(LatLng(lat, lng));
-    }
-    
-    return points;
+  List<LatLng> _parsePolygon(List<dynamic> coordinates) {
+    return coordinates.map((coord) {
+      try {
+        // Convert coordinates to double, whether they are int or double
+        double lng = (coord[0] is int) ? (coord[0] as int).toDouble() : coord[0];
+        double lat = (coord[1] is int) ? (coord[1] as int).toDouble() : coord[1];
+        return LatLng(lat, lng);
+      } catch (e) {
+        print('Error parsing coordinate: $e');
+        return null;
+      }
+    }).whereType<LatLng>().toList();
   }
 }

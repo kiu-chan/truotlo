@@ -36,7 +36,7 @@ class LoginPageState extends State<LoginPage> {
       try {
         final db = DefaultDatabase();
         await db.connect();
-        final accountQueries = AccountQueries(db.connection!);
+        final accountQueries = AccountQueries();
         final user = await accountQueries.login(
           _usernameController.text,
           _passwordController.text,

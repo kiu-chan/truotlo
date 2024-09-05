@@ -1,30 +1,66 @@
-import 'package:postgres/postgres.dart';
-import 'package:bcrypt/bcrypt.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:truotlo/src/data/account/user.dart';
 
-
 class AccountQueries {
-  final PostgreSQLConnection connection;
-
-  AccountQueries(this.connection);
+  final String baseUrl = 'https://truotlobinhdinh.girc.edu.vn/api';
 
   Future<User?> login(String email, String password) async {
-    final results = await connection.mappedResultsQuery(
-      'SELECT id, name, email, role, password FROM public.users WHERE email = @email LIMIT 1',
-      substitutionValues: {
-        'email': email,
-      },
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'email': email,
+          'password': password,
+        }),
+      );
 
-    if (results.isNotEmpty) {
-      final userData = results.first['users']!;
-      final storedHash = userData['password'] as String;
-      
-      if (BCrypt.checkpw(password, storedHash)) {
-        return User.fromJson(userData);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final user = User.fromJson(data['user']);
+        // You might want to store the access token somewhere secure
+        // For example: await secureStorage.write(key: 'access_token', value: data['access_token']);
+        return user;
+      } else {
+        print('Failed to login: ${response.body}');
+        return null;
       }
+    } catch (e) {
+      print('Error during login: $e');
+      return null;
     }
-    
-    return null;
+  }
+
+  Future<User?> register(String name, String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/register'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'name': name,
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final user = User.fromJson(data['user']);
+        // You might want to store the access token somewhere secure
+        // For example: await secureStorage.write(key: 'access_token', value: data['access_token']);
+        return user;
+      } else {
+        print('Failed to register: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error during registration: $e');
+      return null;
+    }
   }
 }

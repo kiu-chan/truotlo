@@ -36,11 +36,11 @@ class DefaultDatabase {
       print('Connected to PostgreSQL database.');
       _connectionFailed = false;
 
-      borderDatabase = BorderDatabase(connection!);
-      districtDatabase = DistrictDatabase(connection!);
-      communeDatabase = CommuneDatabase(connection!);
+      borderDatabase = BorderDatabase();
+      districtDatabase = DistrictDatabase();
+      communeDatabase = CommuneDatabase();
       landslideDatabase = LandslideDatabase();
-      accountQueries = AccountQueries(connection!);
+      accountQueries = AccountQueries();
     } catch (e) {
       print('Failed to connect to database: $e');
       _connectionFailed = true;
