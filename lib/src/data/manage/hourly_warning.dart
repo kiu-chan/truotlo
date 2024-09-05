@@ -24,4 +24,19 @@ class HourlyWarning {
   });
 
   String get formattedDate => 'Giờ $hour - Ngày $day/$month/$year';
+
+  factory HourlyWarning.fromJson(Map<String, dynamic> json) {
+    return HourlyWarning(
+      id: json['id'],
+      hour: json['hour'],
+      day: json['day'],
+      month: json['month'],
+      year: json['year'],
+      location: json['location'],
+      warningLevel: json['warning_level'],
+      description: json['description'],
+      lat: double.parse(json['lat']),
+      lon: double.parse(json['lon']),
+    );
+  }
 }

@@ -14,4 +14,15 @@ class ManageLandslidePoint {
     required this.longitude,
     required this.description,
   });
+
+  factory ManageLandslidePoint.fromJson(Map<String, dynamic> json) {
+    return ManageLandslidePoint(
+      id: json['id'],
+      name: json['name'],
+      code: json['code'],
+      latitude: json['latitude'].toDouble(),
+      longitude: json['longitude'].toDouble(),
+      description: json['description'],
+    );
+  }
 }

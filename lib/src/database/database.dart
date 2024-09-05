@@ -39,7 +39,7 @@ class DefaultDatabase {
       borderDatabase = BorderDatabase(connection!);
       districtDatabase = DistrictDatabase(connection!);
       communeDatabase = CommuneDatabase(connection!);
-      landslideDatabase = LandslideDatabase(connection!);
+      landslideDatabase = LandslideDatabase();
       accountQueries = AccountQueries(connection!);
     } catch (e) {
       print('Failed to connect to database: $e');
