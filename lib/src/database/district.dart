@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:truotlo/src/config/api.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
 
 class DistrictDatabase {
-  final String baseUrl = 'https://truotlobinhdinh.girc.edu.vn/api';
+  final String baseUrl = ApiConfig().getApiUrl();
 
   Future<List<District>> fetchDistrictsData() async {
     final response = await http.get(Uri.parse('$baseUrl/districts-data'));

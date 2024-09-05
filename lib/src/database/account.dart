@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:truotlo/src/config/api.dart';
 import 'package:truotlo/src/data/account/user.dart';
 
 class AccountQueries {
-  final String baseUrl = 'https://truotlobinhdinh.girc.edu.vn/api';
+  final String baseUrl = ApiConfig().getApiUrl();
 
   Future<User?> login(String email, String password) async {
     try {

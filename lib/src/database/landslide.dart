@@ -4,9 +4,10 @@ import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/data/manage/landslide_point.dart';
+import 'package:truotlo/src/config/api.dart';
 
 class LandslideDatabase {
-  final String baseUrl = 'https://truotlobinhdinh.girc.edu.vn/api';
+  final String baseUrl = ApiConfig().getApiUrl();
 
   Future<List<LandslidePoint>> fetchLandslidePoints() async {
     final response = await http.get(Uri.parse('$baseUrl/landslides'));
