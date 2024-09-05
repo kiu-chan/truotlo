@@ -82,7 +82,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
 
   // Phương thức lấy dữ liệu các huyện
   Future<void> _fetchDistricts() async {
-    if (database.connection != null && !isDistrictsLoaded) {
+    if (!isDistrictsLoaded) {
       try {
         districts = await database.fetchDistrictsData();
         districtVisibility = {
@@ -102,7 +102,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
 
   // Phương thức lấy dữ liệu đường biên
   Future<void> _fetchBorderPolygons() async {
-    if (database.connection != null && !isBorderLoaded) {
+    if (!isBorderLoaded) {
       try {
         borderPolygons = await database.borderDatabase.fetchAndParseGeometry();
         isBorderLoaded = true;
@@ -120,7 +120,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
 
   // Phương thức lấy dữ liệu các xã
   Future<void> _fetchCommunes() async {
-    if (database.connection != null && !isCommunesLoaded) {
+    if (!isCommunesLoaded) {
       try {
         communes = await database.fetchCommunesData();
         isCommunesLoaded = true;
@@ -137,7 +137,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
 
   // Phương thức lấy dữ liệu các điểm trượt lở
   Future<void> _fetchLandslidePoints() async {
-    if (database.connection != null && !isLandslidePointsLoaded) {
+    if (!isLandslidePointsLoaded) {
       try {
         landslidePoints = await database.fetchLandslidePoints();
         isLandslidePointsLoaded = true;
@@ -619,7 +619,6 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   @override
   void dispose() {
     locationService.stopLocationUpdates();
-    database.connection?.close();
     mapController.onSymbolTapped.remove(onSymbolTapped);
     super.dispose();
   }

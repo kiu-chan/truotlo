@@ -100,7 +100,6 @@ class MapboxPageState extends State<MapboxPage> with MapState {
   @override
   void dispose() {
     locationService.stopLocationUpdates();
-    database.connection?.close();
     mapController.onSymbolTapped.remove(onSymbolTapped);
     super.dispose();
   }

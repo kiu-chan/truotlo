@@ -35,35 +35,29 @@ class ManagePageState extends State<ManagePage> with SingleTickerProviderStateMi
   }
 
   Future<void> _loadForecasts() async {
-    if (database.connection != null) {
-      try {
-        forecasts = await database.landslideDatabase.fetchForecasts();
-        setState(() {});
-      } catch (e) {
-        print('Error loading forecasts: $e');
-      }
+    try {
+      forecasts = await database.fetchForecasts();
+      setState(() {});
+    } catch (e) {
+      print('Error loading forecasts: $e');
     }
   }
 
   Future<void> _loadHourlyWarnings() async {
-    if (database.connection != null) {
-      try {
-        hourlyWarnings = await database.fetchHourlyWarnings();
-        setState(() {});
-      } catch (e) {
-        print('Error loading hourly warnings: $e');
-      }
+    try {
+      hourlyWarnings = await database.fetchHourlyWarnings();
+      setState(() {});
+    } catch (e) {
+      print('Error loading hourly warnings: $e');
     }
   }
 
   Future<void> _loadLandslidePoints() async {
-    if (database.connection != null) {
-      try {
-        landslidePoints = await database.fetchListLandslidePoints();
-        setState(() {});
-      } catch (e) {
-        print('Error loading landslide points: $e');
-      }
+    try {
+      landslidePoints = await database.fetchListLandslidePoints();
+      setState(() {});
+    } catch (e) {
+      print('Error loading landslide points: $e');
     }
   }
 
