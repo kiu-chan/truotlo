@@ -52,7 +52,7 @@ class LandslideDatabase {
     }
   }
 
-  Future<ForecastDetail> fetchForecastDetail(String id) async {
+  Future<ForecastDetail> fetchForecastDetail(int id) async {
     final response = await http.get(Uri.parse('$baseUrl/forecasts/$id'));
 
     if (response.statusCode == 200) {

@@ -174,7 +174,7 @@ class ManagePageState extends State<ManagePage> with SingleTickerProviderStateMi
     );
   }
 
-  void showForecastDetails(String forecastId) async {
+  void showForecastDetails(int forecastId) async {
     try {
       final detail = await database.landslideDatabase.fetchForecastDetail(forecastId);
       showDialog(
