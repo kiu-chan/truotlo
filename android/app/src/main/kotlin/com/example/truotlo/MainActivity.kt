@@ -1,4 +1,4 @@
-package com.example.truotlo
+package com.girc.truotlo
 
 import io.flutter.embedding.android.FlutterActivity
 
