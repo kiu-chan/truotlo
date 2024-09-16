@@ -65,5 +65,9 @@
     <!-- Optional: Enable Mapbox telemetry -->
     <key>MGLMapboxMetricsEnabledSettingShownInApp</key>
     <true/>
+
+    <!-- Disable Impeller -->
+    <key>FLTEnableImpeller</key>
+    <false/>
 </dict>
 </plist>
