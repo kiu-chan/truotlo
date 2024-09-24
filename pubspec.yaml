@@ -71,6 +71,7 @@ flutter:
   assets:
     - lib/assets/report/
     - lib/assets/clouds/
+    - lib/assets/map/
     - lib/assets/location_icon.png
     - lib/assets/landslide.png
 
