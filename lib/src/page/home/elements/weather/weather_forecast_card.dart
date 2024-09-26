@@ -40,39 +40,33 @@ class WeatherForecastCard extends StatelessWidget {
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButton<WeatherDistrict>(
-                    value: selectedDistrict,
-                    items: districts.map((WeatherDistrict district) {
-                      return DropdownMenuItem<WeatherDistrict>(
-                        value: district,
-                        child: Text(district.name,
-                            style: const TextStyle(color: Colors.black)),
-                      );
-                    }).toList(),
-                    onChanged: onDistrictChanged,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButton<Ward>(
-                    value: selectedWard,
-                    items: selectedDistrict.wards.map((Ward ward) {
-                      return DropdownMenuItem<Ward>(
-                        value: ward,
-                        child: Text(ward.name,
-                            style: const TextStyle(color: Colors.black)),
-                      );
-                    }).toList(),
-                    onChanged: onWardChanged,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 16),
+            DropdownButton<WeatherDistrict>(
+              value: selectedDistrict,
+              isExpanded: true,
+              items: districts.map((WeatherDistrict district) {
+                return DropdownMenuItem<WeatherDistrict>(
+                  value: district,
+                  child: Text(district.name,
+                      style: const TextStyle(color: Colors.black)),
+                );
+              }).toList(),
+              onChanged: onDistrictChanged,
             ),
             const SizedBox(height: 8),
+            DropdownButton<Ward>(
+              value: selectedWard,
+              isExpanded: true,
+              items: selectedDistrict.wards.map((Ward ward) {
+                return DropdownMenuItem<Ward>(
+                  value: ward,
+                  child: Text(ward.name,
+                      style: const TextStyle(color: Colors.black)),
+                );
+              }).toList(),
+              onChanged: onWardChanged,
+            ),
+            const SizedBox(height: 16),
             if (isLoading)
               const Center(
                   child: CircularProgressIndicator(color: Colors.white))

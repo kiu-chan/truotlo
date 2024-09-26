@@ -65,7 +65,6 @@ class ChartUtils {
       borderData: FlBorderData(show: true),
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
-          // tooltipBgColor: Colors.blueGrey.withOpacity(0.8),
           getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
             return touchedBarSpots.map((barSpot) {
               final flSpot = barSpot;
@@ -73,12 +72,7 @@ class ChartUtils {
                 return null;
               }
               
-              // Get the corresponding date for the x-value
-              // DateTime date = chartDataList[0].dates[flSpot.x.toInt()];
-              // String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
-              
-              // Format the tooltip text
-              String tooltipText = '(${flSpot.x}, ${flSpot.y})';
+              String tooltipText = '(${flSpot.x.toStringAsFixed(2)}, ${flSpot.y.toStringAsFixed(2)})';
               
               return LineTooltipItem(
                 tooltipText,
@@ -104,7 +98,6 @@ class ChartUtils {
                     radius: 4,
                     color: Colors.white,
                     strokeWidth: 2,
-                    // strokeColor: barData.color,
                   );
                 },
               ),
@@ -235,7 +228,15 @@ class ChartUtils {
               }
               return const Text('');
             }
-            // Chỉ làm tròn khi có số thập phân
+            // Đối với biểu đồ đo nghiêng, chỉ hiển thị các giá trị cụ thể
+            if (selectedChart.startsWith('Đo nghiêng')) {
+              List<double> tiltValues = [-0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5];
+              if (tiltValues.contains(value)) {
+                return Text(value.toStringAsFixed(1));
+              }
+              return const Text('');
+            }
+            // Đối với các biểu đồ khác, giữ nguyên logic hiện tại
             return Text(value.truncateToDouble() == value
                 ? value.toStringAsFixed(0)
                 : value.toStringAsFixed(2));
@@ -248,7 +249,7 @@ class ChartUtils {
             'Crackmeter 3'
           ].contains(selectedChart)
               ? null
-              : 0.02, // Tăng khoảng cách giữa các nhãn
+              : 0.1, // Điều chỉnh khoảng cách cho biểu đồ đo nghiêng
         ),
       ),
       leftTitles: AxisTitles(
@@ -256,12 +257,21 @@ class ChartUtils {
           showTitles: true,
           reservedSize: 40,
           getTitlesWidget: (value, meta) {
-            // Chỉ làm tròn khi có số thập phân
-            return Text(value.truncateToDouble() == value
-                ? value.toStringAsFixed(0)
-                : value.toStringAsFixed(2));
+            if (selectedChart.startsWith('Đo nghiêng')) {
+              // Chỉ hiển thị các giá trị -16, -11, -6 cho biểu đồ đo nghiêng
+              List<double> depthValues = [-16, -11, -6];
+              if (depthValues.contains(value)) {
+                return Text(value.toStringAsFixed(0));
+              }
+              return const Text('');
+            } else {
+              // Đối với các biểu đồ khác, giữ nguyên logic hiện tại
+              return Text(value.truncateToDouble() == value
+                  ? value.toStringAsFixed(0)
+                  : value.toStringAsFixed(2));
+            }
           },
-          interval: 2,
+          interval: 1, // Đặt khoảng cách là 1 để kiểm soát tốt hơn
         ),
       ),
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -338,5 +348,4 @@ class ChartUtils {
       ),
     );
   }
-
 }

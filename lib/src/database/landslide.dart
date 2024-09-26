@@ -8,6 +8,7 @@ import 'package:truotlo/src/config/api.dart';
 
 class LandslideDatabase {
   final String baseUrl = ApiConfig().getApiUrl();
+  final ApiConfig apiConfig = ApiConfig();
 
   Future<List<LandslidePoint>> fetchLandslidePoints() async {
     final response = await http.get(Uri.parse('$baseUrl/landslides'));
@@ -82,6 +83,36 @@ class LandslideDatabase {
       return List<String>.from(jsonResponse);
     } else {
       throw Exception('Không thể tải danh sách huyện');
+    }
+  }
+
+    Future<Map<String, int>> getForecastCounts() async {
+    final url = '${apiConfig.getApiUrl()}/forecast-record-points';
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body)['data'] as List;
+      
+      Map<String, int> counts = {
+        'Rất cao': 0,
+        'Cao': 0,
+        'Trung bình': 0,
+        'Thấp': 0,
+        'Rất thấp': 0,
+      };
+
+      for (var item in data) {
+        String nguyCo = item['nguy_co'].toString().toLowerCase();
+        if (nguyCo == 'rất cao') counts['Rất cao'] = (counts['Rất cao'] ?? 0) + 1;
+        else if (nguyCo == 'cao') counts['Cao'] = (counts['Cao'] ?? 0) + 1;
+        else if (nguyCo == 'trung bình') counts['Trung bình'] = (counts['Trung bình'] ?? 0) + 1;
+        else if (nguyCo == 'thấp') counts['Thấp'] = (counts['Thấp'] ?? 0) + 1;
+        else if (nguyCo == 'rất thấp') counts['Rất thấp'] = (counts['Rất thấp'] ?? 0) + 1;
+      }
+
+      return counts;
+    } else {
+      throw Exception('Failed to load forecast data');
     }
   }
 }

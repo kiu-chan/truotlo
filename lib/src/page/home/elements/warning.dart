@@ -1,39 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:truotlo/src/database/landslide.dart';
 
-class DisasterWarningCard extends StatelessWidget {
-  const DisasterWarningCard({super.key});
+class DisasterWarningCard extends StatefulWidget {
+  const DisasterWarningCard({Key? key}) : super(key: key);
+
+  @override
+  _DisasterWarningCardState createState() => _DisasterWarningCardState();
+}
+
+class _DisasterWarningCardState extends State<DisasterWarningCard> {
+  final LandslideDatabase _forecastService = LandslideDatabase();
+  Map<String, int> _counts = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final counts = await _forecastService.getForecastCounts();
+      setState(() {
+        _counts = counts;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading forecast data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return Card(
       color: Colors.blue,
       child: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'DỰ BÁO LÚC: 08:26 NGÀY 17/08',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            WarningRow(
-                icon: Icons.warning,
-                text: 'Số điểm nguy cơ sạt lở',
-                value: '0'),
-            WarningRow(
-                icon: Icons.warning,
-                text: 'Số công trình có nguy cơ bị thiệt hại',
-                value: '0'),
-            WarningRow(
-                icon: Icons.warning,
-                text: 'Số người có nguy cơ bị ảnh hưởng',
-                value: '0'),
-            WarningRow(
-                icon: Icons.warning,
-                text: 'Diện tích nông nghiệp bị thiệt hại',
-                value: '0'),
+            const SizedBox(height: 8),
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator(color: Colors.white))
+            else
+              ...[
+                WarningRow(
+                  icon: Icons.warning,
+                  text: 'Số điểm nguy trượt lở đất đá RẤT CAO',
+                  value: _counts['Rất cao']?.toString() ?? '0',
+                ),
+                WarningRow(
+                  icon: Icons.warning,
+                  text: 'Số điểm nguy trượt lở đất đá CAO',
+                  value: _counts['Cao']?.toString() ?? '0',
+                ),
+                WarningRow(
+                  icon: Icons.warning,
+                  text: 'Số điểm nguy trượt lở đất đá TRUNG BÌNH',
+                  value: _counts['Trung bình']?.toString() ?? '0',
+                ),
+                WarningRow(
+                  icon: Icons.warning,
+                  text: 'Số điểm nguy trượt lở đất đá THẤP',
+                  value: _counts['Thấp']?.toString() ?? '0',
+                ),
+                WarningRow(
+                  icon: Icons.warning,
+                  text: 'Số điểm nguy trượt lở đất đá RẤT THẤP',
+                  value: _counts['Rất thấp']?.toString() ?? '0',
+                ),
+              ],
           ],
         ),
       ),
@@ -46,8 +90,12 @@ class WarningRow extends StatelessWidget {
   final String text;
   final String value;
 
-  const WarningRow(
-      {super.key, required this.icon, required this.text, required this.value});
+  const WarningRow({
+    Key? key,
+    required this.icon,
+    required this.text,
+    required this.value,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -58,10 +106,12 @@ class WarningRow extends StatelessWidget {
           Icon(icon, color: Colors.yellow),
           const SizedBox(width: 8),
           Expanded(
-              child: Text(text, style: const TextStyle(color: Colors.white))),
-          Text(value,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(text, style: const TextStyle(color: Colors.white)),
+          ),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
