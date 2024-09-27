@@ -65,11 +65,14 @@ class LandslideDatabase {
   }
 
   Future<List<ManageLandslidePoint>> fetchListLandslidePoints() async {
-    final response = await http.get(Uri.parse('$baseUrl/manage-landslide-points'));
+    final response =
+        await http.get(Uri.parse('$baseUrl/manage-landslide-points'));
 
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = json.decode(response.body);
-      return jsonResponse.map((data) => ManageLandslidePoint.fromJson(data)).toList();
+      return jsonResponse
+          .map((data) => ManageLandslidePoint.fromJson(data))
+          .toList();
     } else {
       throw Exception('Không thể tải danh sách điểm trượt lở để quản lý');
     }
@@ -86,13 +89,11 @@ class LandslideDatabase {
     }
   }
 
-    Future<Map<String, int>> getForecastCounts() async {
+  Future<Map<String, int>> getForecastCounts() async {
     final url = '${apiConfig.getApiUrl()}/forecast-record-points';
     final response = await http.get(Uri.parse(url));
-
     if (response.statusCode == 200) {
-      final data = json.decode(response.body)['data'] as List;
-      
+      final List<dynamic> data = json.decode(response.body) as List;
       Map<String, int> counts = {
         'Rất cao': 0,
         'Cao': 0,
@@ -102,14 +103,25 @@ class LandslideDatabase {
       };
 
       for (var item in data) {
-        String nguyCo = item['nguy_co'].toString().toLowerCase();
-        if (nguyCo == 'rất cao') counts['Rất cao'] = (counts['Rất cao'] ?? 0) + 1;
-        else if (nguyCo == 'cao') counts['Cao'] = (counts['Cao'] ?? 0) + 1;
-        else if (nguyCo == 'trung bình') counts['Trung bình'] = (counts['Trung bình'] ?? 0) + 1;
-        else if (nguyCo == 'thấp') counts['Thấp'] = (counts['Thấp'] ?? 0) + 1;
-        else if (nguyCo == 'rất thấp') counts['Rất thấp'] = (counts['Rất thấp'] ?? 0) + 1;
+        String nguyCo = item['nguy_co'].toString().trim().toLowerCase();
+        switch (nguyCo) {
+          case 'rất cao':
+            counts['Rất cao'] = (counts['Rất cao'] ?? 0) + 1;
+            break;
+          case 'cao':
+            counts['Cao'] = (counts['Cao'] ?? 0) + 1;
+            break;
+          case 'trung bình':
+            counts['Trung bình'] = (counts['Trung bình'] ?? 0) + 1;
+            break;
+          case 'thấp':
+            counts['Thấp'] = (counts['Thấp'] ?? 0) + 1;
+            break;
+          case 'rất thấp':
+            counts['Rất thấp'] = (counts['Rất thấp'] ?? 0) + 1;
+            break;
+        }
       }
-
       return counts;
     } else {
       throw Exception('Failed to load forecast data');

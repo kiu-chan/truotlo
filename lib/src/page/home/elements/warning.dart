@@ -45,39 +45,40 @@ class _DisasterWarningCardState extends State<DisasterWarningCard> {
           children: [
             const Text(
               'DỰ BÁO LÚC: 08:26 NGÀY 17/08',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             if (_isLoading)
-              const Center(child: CircularProgressIndicator(color: Colors.white))
-            else
-              ...[
-                WarningRow(
-                  icon: Icons.warning,
-                  text: 'Số điểm nguy trượt lở đất đá RẤT CAO',
-                  value: _counts['Rất cao']?.toString() ?? '0',
-                ),
-                WarningRow(
-                  icon: Icons.warning,
-                  text: 'Số điểm nguy trượt lở đất đá CAO',
-                  value: _counts['Cao']?.toString() ?? '0',
-                ),
-                WarningRow(
-                  icon: Icons.warning,
-                  text: 'Số điểm nguy trượt lở đất đá TRUNG BÌNH',
-                  value: _counts['Trung bình']?.toString() ?? '0',
-                ),
-                WarningRow(
-                  icon: Icons.warning,
-                  text: 'Số điểm nguy trượt lở đất đá THẤP',
-                  value: _counts['Thấp']?.toString() ?? '0',
-                ),
-                WarningRow(
-                  icon: Icons.warning,
-                  text: 'Số điểm nguy trượt lở đất đá RẤT THẤP',
-                  value: _counts['Rất thấp']?.toString() ?? '0',
-                ),
-              ],
+              const Center(
+                  child: CircularProgressIndicator(color: Colors.white))
+            else ...[
+              WarningRow(
+                icon: Icons.warning,
+                text: 'Số điểm nguy trượt lở đất đá RẤT CAO',
+                value: _counts['Rất cao']?.toString() ?? '0',
+              ),
+              WarningRow(
+                icon: Icons.warning,
+                text: 'Số điểm nguy trượt lở đất đá CAO',
+                value: _counts['Cao']?.toString() ?? '0',
+              ),
+              WarningRow(
+                icon: Icons.warning,
+                text: 'Số điểm nguy trượt lở đất đá TRUNG BÌNH',
+                value: _counts['Trung bình']?.toString() ?? '0',
+              ),
+              WarningRow(
+                icon: Icons.warning,
+                text: 'Số điểm nguy trượt lở đất đá THẤP',
+                value: _counts['Thấp']?.toString() ?? '0',
+              ),
+              WarningRow(
+                icon: Icons.warning,
+                text: 'Số điểm nguy trượt lở đất đá RẤT THẤP',
+                value: _counts['Rất thấp']?.toString() ?? '0',
+              ),
+            ],
           ],
         ),
       ),
@@ -110,7 +111,8 @@ class WarningRow extends StatelessWidget {
           ),
           Text(
             value,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ],
       ),
