@@ -3,6 +3,9 @@ import 'package:truotlo/src/data/chart/landslide_data.dart';
 
 class ChartDataProcessor {
   List<ChartData> processData(List<LandslideDataModel> filteredData) {
+    // Sort the filtered data by date in ascending order
+    filteredData.sort((a, b) => DateTime.parse(a.createdAt).compareTo(DateTime.parse(b.createdAt)));
+
     List<List<double>> eastWestData = [];
     List<List<double>> northSouthData = [];
     List<double> pz1Data = [];

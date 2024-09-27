@@ -61,7 +61,7 @@ class ChartUtils {
     return LineChartData(
       lineBarsData: _getLineBarsData(
           selectedChart, chartDataList, lineVisibility, isAdmin),
-      titlesData: _getTitlesData(selectedChart, filteredData),
+      titlesData: _getTitlesData(selectedChart, filteredData, chartDataList),
       gridData: const FlGridData(show: true),
       borderData: FlBorderData(show: true),
       lineTouchData: LineTouchData(
@@ -73,8 +73,17 @@ class ChartUtils {
                 return null;
               }
 
-              String tooltipText =
-                  '(${flSpot.x.toStringAsFixed(2)}, ${flSpot.y.toStringAsFixed(2)})';
+              ChartData selectedChartData =
+                  chartDataList.firstWhere((c) => c.name == selectedChart);
+              String tooltipText;
+              if (selectedChart.startsWith('Đo nghiêng')) {
+                tooltipText =
+                    'Độ sâu: ${flSpot.y.toStringAsFixed(0)}, Giá trị: ${flSpot.x.toStringAsFixed(3)}';
+              } else {
+                String date = DateFormat('dd/MM/yyyy HH:mm')
+                    .format(selectedChartData.dates[flSpot.x.toInt()]);
+                tooltipText = '$date: ${flSpot.y.toStringAsFixed(2)}';
+              }
 
               return LineTooltipItem(
                 tooltipText,
@@ -144,7 +153,7 @@ class ChartUtils {
           ),
         );
       }
-    } else {
+    } else if (selectedChart.startsWith('Đo nghiêng')) {
       for (int i = 0; i < selectedChartData.dataPoints.length; i++) {
         if (lineVisibility[i] ?? false) {
           lineBars.add(
@@ -165,7 +174,7 @@ class ChartUtils {
       }
 
       // Thêm đường giá trị mặc định chỉ cho admin
-      if ((lineVisibility[-1] ?? false)) {
+      if ((lineVisibility[-1] ?? false) && isAdmin) {
         if (selectedChart == 'Đo nghiêng, hướng Tây - Đông') {
           lineBars.add(
             LineChartBarData(
@@ -205,13 +214,13 @@ class ChartUtils {
     return lineBars;
   }
 
-  static FlTitlesData _getTitlesData(
-      String selectedChart, List<LandslideDataModel> filteredData) {
+  static FlTitlesData _getTitlesData(String selectedChart,
+      List<LandslideDataModel> filteredData, List<ChartData> chartDataList) {
     return FlTitlesData(
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 30,
+          reservedSize: 60,
           getTitlesWidget: (value, meta) {
             if ([
               'Piezometer 1',
@@ -220,38 +229,34 @@ class ChartUtils {
               'Crackmeter 2',
               'Crackmeter 3'
             ].contains(selectedChart)) {
+              ChartData selectedChartData =
+                  chartDataList.firstWhere((c) => c.name == selectedChart);
               int index = value.toInt();
               if (index >= 0 &&
-                  index < filteredData.length &&
-                  index % (filteredData.length ~/ 5) == 0) {
-                return Text(
-                  DateFormat('dd/MM')
-                      .format(DateTime.parse(filteredData[index].createdAt)),
-                  style: const TextStyle(fontSize: 10),
+                  index < selectedChartData.dates.length &&
+                  index % (selectedChartData.dates.length ~/ 5) == 0) {
+                return Transform.rotate(
+                  angle: -45 * 3.14 / 180,
+                  child: Text(
+                    DateFormat('dd/MM HH:mm')
+                        .format(selectedChartData.dates[index]),
+                    style: const TextStyle(fontSize: 10),
+                  ),
                 );
               }
               return const Text('');
-            }
-            if (selectedChart.startsWith('Đo nghiêng')) {
-              List<double> tiltValues = [-0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5];
-              if (tiltValues.contains(value)) {
-                return Text(value.toStringAsFixed(1));
-              }
-              return const Text('');
+            } else if (selectedChart.startsWith('Đo nghiêng')) {
+              // Hiển thị giá trị đo nghiêng trên trục x
+              return Text(
+                value.toStringAsFixed(3),
+                style: const TextStyle(fontSize: 10),
+              );
             }
             return Text(value.truncateToDouble() == value
                 ? value.toStringAsFixed(0)
                 : value.toStringAsFixed(2));
           },
-          interval: [
-            'Piezometer 1',
-            'Piezometer 2',
-            'Crackmeter 1',
-            'Crackmeter 2',
-            'Crackmeter 3'
-          ].contains(selectedChart)
-              ? null
-              : 0.1,
+          interval: selectedChart.startsWith('Đo nghiêng') ? 0.1 : null,
         ),
       ),
       leftTitles: AxisTitles(
