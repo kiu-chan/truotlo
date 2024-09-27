@@ -56,10 +56,11 @@ class ChartUtils {
     List<ChartData> chartDataList,
     Map<int, bool> lineVisibility,
     List<LandslideDataModel> filteredData,
+    bool isAdmin,
   ) {
     return LineChartData(
-      lineBarsData:
-          _getLineBarsData(selectedChart, chartDataList, lineVisibility),
+      lineBarsData: _getLineBarsData(
+          selectedChart, chartDataList, lineVisibility, isAdmin),
       titlesData: _getTitlesData(selectedChart, filteredData),
       gridData: const FlGridData(show: true),
       borderData: FlBorderData(show: true),
@@ -71,9 +72,10 @@ class ChartUtils {
               if (flSpot.x == -1 || flSpot.y == -1) {
                 return null;
               }
-              
-              String tooltipText = '(${flSpot.x.toStringAsFixed(2)}, ${flSpot.y.toStringAsFixed(2)})';
-              
+
+              String tooltipText =
+                  '(${flSpot.x.toStringAsFixed(2)}, ${flSpot.y.toStringAsFixed(2)})';
+
               return LineTooltipItem(
                 tooltipText,
                 const TextStyle(color: Colors.white, fontSize: 12),
@@ -88,7 +90,8 @@ class ChartUtils {
           // Custom touch callback if needed
         },
         handleBuiltInTouches: true,
-        getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
+        getTouchedSpotIndicator:
+            (LineChartBarData barData, List<int> spotIndexes) {
           return spotIndexes.map((spotIndex) {
             return TouchedSpotIndicatorData(
               const FlLine(color: Colors.white, strokeWidth: 2),
@@ -112,6 +115,7 @@ class ChartUtils {
     String selectedChart,
     List<ChartData> chartDataList,
     Map<int, bool> lineVisibility,
+    bool isAdmin,
   ) {
     ChartData selectedChartData =
         chartDataList.firstWhere((c) => c.name == selectedChart);
@@ -160,8 +164,8 @@ class ChartUtils {
         }
       }
 
-      // Thêm đường giá trị mặc định
-      if (lineVisibility[-1] ?? false) {
+      // Thêm đường giá trị mặc định chỉ cho admin
+      if ((lineVisibility[-1] ?? false)) {
         if (selectedChart == 'Đo nghiêng, hướng Tây - Đông') {
           lineBars.add(
             LineChartBarData(
@@ -228,7 +232,6 @@ class ChartUtils {
               }
               return const Text('');
             }
-            // Đối với biểu đồ đo nghiêng, chỉ hiển thị các giá trị cụ thể
             if (selectedChart.startsWith('Đo nghiêng')) {
               List<double> tiltValues = [-0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5];
               if (tiltValues.contains(value)) {
@@ -236,7 +239,6 @@ class ChartUtils {
               }
               return const Text('');
             }
-            // Đối với các biểu đồ khác, giữ nguyên logic hiện tại
             return Text(value.truncateToDouble() == value
                 ? value.toStringAsFixed(0)
                 : value.toStringAsFixed(2));
@@ -249,7 +251,7 @@ class ChartUtils {
             'Crackmeter 3'
           ].contains(selectedChart)
               ? null
-              : 0.1, // Điều chỉnh khoảng cách cho biểu đồ đo nghiêng
+              : 0.1,
         ),
       ),
       leftTitles: AxisTitles(
@@ -258,20 +260,18 @@ class ChartUtils {
           reservedSize: 40,
           getTitlesWidget: (value, meta) {
             if (selectedChart.startsWith('Đo nghiêng')) {
-              // Chỉ hiển thị các giá trị -16, -11, -6 cho biểu đồ đo nghiêng
               List<double> depthValues = [-16, -11, -6];
               if (depthValues.contains(value)) {
                 return Text(value.toStringAsFixed(0));
               }
               return const Text('');
             } else {
-              // Đối với các biểu đồ khác, giữ nguyên logic hiện tại
               return Text(value.truncateToDouble() == value
                   ? value.toStringAsFixed(0)
                   : value.toStringAsFixed(2));
             }
           },
-          interval: 1, // Đặt khoảng cách là 1 để kiểm soát tốt hơn
+          interval: 1,
         ),
       ),
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -284,6 +284,7 @@ class ChartUtils {
     Map<int, bool> lineVisibility,
     List<ChartData> chartDataList,
     Function(int) toggleLineVisibility,
+    bool isAdmin,
   ) {
     if ([
       'Piezometer 1',
@@ -297,20 +298,32 @@ class ChartUtils {
             Colors.blue, selectedChart, 0, lineVisibility, toggleLineVisibility)
       ];
     } else {
-      return lineVisibility.entries.map((entry) {
+      var legendItems =
+          lineVisibility.entries.where((entry) => entry.key != -1).map((entry) {
         return _buildLegendItem(
-          entry.key == -1
-              ? Colors.black
-              : Colors.primaries[entry.key % Colors.primaries.length],
-          entry.key == -1
-              ? 'Giá trị mặc định'
-              : DateFormat('dd/MM/yyyy HH:mm')
-                  .format(chartDataList[0].dates[entry.key]),
+          Colors.primaries[entry.key % Colors.primaries.length],
+          DateFormat('dd/MM/yyyy HH:mm')
+              .format(chartDataList[0].dates[entry.key]),
           entry.key,
           lineVisibility,
           toggleLineVisibility,
         );
       }).toList();
+
+      // Thêm mục chú thích giá trị mặc định chỉ cho admin
+      if (isAdmin && (lineVisibility[-1] ?? false)) {
+        legendItems.add(
+          _buildLegendItem(
+            Colors.black,
+            'Giá trị mặc định',
+            -1,
+            lineVisibility,
+            toggleLineVisibility,
+          ),
+        );
+      }
+
+      return legendItems;
     }
   }
 
@@ -347,5 +360,20 @@ class ChartUtils {
         ),
       ),
     );
+  }
+
+  static List<LandslideDataModel> filterDataBasedOnUserRole(
+    List<LandslideDataModel> allData,
+    bool isAdmin,
+  ) {
+    if (isAdmin) {
+      return List.from(allData);
+    } else {
+      final twoDaysAgo = DateTime.now().subtract(const Duration(days: 2));
+      return allData.where((item) {
+        final itemDate = DateTime.parse(item.createdAt);
+        return itemDate.isAfter(twoDaysAgo);
+      }).toList();
+    }
   }
 }

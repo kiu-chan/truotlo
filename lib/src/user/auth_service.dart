@@ -35,4 +35,9 @@ class UserPreferences {
     await prefs.remove(_roleKey);
     await prefs.setBool(_isLoggedInKey, false);
   }
+
+  static Future<String?> getUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleKey);
+  }
 }

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:truotlo/src/data/chart/chart_data.dart';
 import 'package:truotlo/src/data/chart/landslide_data.dart';
 import 'package:truotlo/src/page/chart/elements/chart_menu.dart';
+import 'package:truotlo/src/user/auth_service.dart';
 import 'elements/chart_data_processor.dart';
 import 'elements/chart_utils.dart';
 
@@ -26,11 +27,30 @@ class ChartPageState extends State<ChartPage> {
   DateTime? _startDateTime;
   DateTime? _endDateTime;
   final Map<int, bool> _lineVisibility = {};
+  String? _userRole;
+  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    _fetchUserRoleAndData();
+  }
+
+  Future<void> _fetchUserRoleAndData() async {
+    try {
+      final role = await UserPreferences.getUserRole();
+      final isLoggedIn = await UserPreferences.isLoggedIn();
+      setState(() {
+        _userRole = role;
+        _isAdmin = isLoggedIn && role == 'admin';
+      });
+      await _fetchData();
+    } catch (e) {
+      setState(() {
+        _error = 'Lỗi khi lấy dữ liệu người dùng: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _fetchData() async {
@@ -43,7 +63,7 @@ class ChartPageState extends State<ChartPage> {
       final data = await _dataService.fetchLandslideData();
       setState(() {
         _allData = data;
-        _filteredData = List.from(_allData);
+        _filterDataBasedOnUserRole();
         _processData();
         ChartUtils.initLineVisibility(_lineVisibility, _filteredData.length);
         _selectedChart =
@@ -56,6 +76,10 @@ class ChartPageState extends State<ChartPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _filterDataBasedOnUserRole() {
+    _filteredData = ChartUtils.filterDataBasedOnUserRole(_allData, _isAdmin);
   }
 
   void _processData() {
@@ -159,28 +183,41 @@ class ChartPageState extends State<ChartPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Center(
+                if (_isAdmin)
+                  Center(
                     child: ElevatedButton(
-                  onPressed: _selectDateTimeRange,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Colors.blue,
-                    foregroundColor:
-                        Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      onPressed: _selectDateTimeRange,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: Text(
+                        ChartUtils.getDateRangeText(
+                            _startDateTime, _endDateTime),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    elevation: 5,
                   ),
-                  child: Text(
-                    ChartUtils.getDateRangeText(_startDateTime, _endDateTime),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                if (!_isAdmin)
+                  Center(
+                    child: Text(
+                      'Dữ liệu của 2 ngày gần nhất',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ),
-                )),
               ],
             ),
           ),
@@ -198,6 +235,7 @@ class ChartPageState extends State<ChartPage> {
                           _chartDataList,
                           _lineVisibility,
                           _filteredData,
+                          _isAdmin,
                         ),
                       ),
                     ),
@@ -209,7 +247,7 @@ class ChartPageState extends State<ChartPage> {
                       ),
                       const SizedBox(height: 10),
                       SizedBox(
-                        height: 400, // Adjust this value as needed
+                        height: 400,
                         child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,6 +256,7 @@ class ChartPageState extends State<ChartPage> {
                               _lineVisibility,
                               _chartDataList,
                               _toggleLineVisibility,
+                              _isAdmin,
                             ),
                           ),
                         ),
