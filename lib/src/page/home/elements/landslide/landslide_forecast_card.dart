@@ -36,9 +36,7 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
                 ? _buildHourlyForecastTable()
                 : _buildDailyForecastTable(),
             const SizedBox(height: 16),
-            _showHourlyForecast
-                ? buildHourlyLegend(context)
-                : buildDailyLegend(context),
+            buildLegend(context),
             const SizedBox(height: 8),
             const Text(
                 'Các huyện không có trong danh sách không có nguy cơ trượt lở',
@@ -83,18 +81,11 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         6: FlexColumnWidth(1),
       },
       children: [
-        buildTableRow([
-          'STT',
-          'Tỉnh',
-          'Huyện',
-          'Vị trí',
-          'Lũ quét',
-          'Trượt nông',
-          'Trượt lớn'
-        ], isHeader: true),
+        buildTableRow(
+            ['STT', 'Huyện', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'],
+            isHeader: true),
         buildTableRow([
           '1',
-          'Bình Định',
           'An Lão',
           'Đá Cạnh',
           buildRiskIcon('no_risk'),
@@ -103,7 +94,6 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         ]),
         buildTableRow([
           '2',
-          'Bình Định8',
           'An Lão8',
           'Đá Cạnh8',
           buildRiskIcon('no_risk'),
@@ -112,7 +102,6 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         ]),
         buildTableRow([
           '3',
-          'Bình Định9',
           'An Lão9',
           'Cống Chào9',
           buildRiskIcon('no_risk'),
@@ -121,7 +110,6 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         ]),
         buildTableRow([
           '4',
-          'Bình Định30',
           'An Lão30',
           'Đá Cạnh30',
           buildRiskIcon('no_risk'),
@@ -130,7 +118,6 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         ]),
         buildTableRow([
           '5',
-          'Bình Định31',
           'An Lão31',
           'Đá Cạnh31',
           buildRiskIcon('no_risk'),
@@ -139,7 +126,6 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         ]),
         buildTableRow([
           '6',
-          'Bình Định32',
           'An Lão32',
           'Đá Cạnh32',
           buildRiskIcon('no_risk'),
@@ -169,29 +155,29 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         buildTableRow([
           '1',
           'An Lão',
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0)
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
         ]),
         buildTableRow([
           '2',
           'An Lão1',
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0)
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
         ]),
         buildTableRow([
           '3',
           'An Lão12',
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0),
-          buildColorDot(0)
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
+          buildRiskIcon('no_risk'),
         ]),
       ],
     );
