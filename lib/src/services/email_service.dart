@@ -14,7 +14,7 @@ class EmailService {
     final smtpServer = gmail(username, password);
 
     final message = Message()
-      ..from = Address(username, 'Your Application')
+      ..from = Address(username, 'Email từ ứng dụng trượt lở')
       ..recipients.add('21020342@vnu.edu.vn')
       ..subject = 'New Request from $name'
       ..text = '''

@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:truotlo/src/database/landslide.dart';
 
 class DisasterWarningCard extends StatefulWidget {
-  const DisasterWarningCard({Key? key}) : super(key: key);
+  const DisasterWarningCard({super.key});
 
   @override
-  _DisasterWarningCardState createState() => _DisasterWarningCardState();
+  DisasterWarningCardState createState() => DisasterWarningCardState();
 }
 
-class _DisasterWarningCardState extends State<DisasterWarningCard> {
+class DisasterWarningCardState extends State<DisasterWarningCard> {
   final LandslideDatabase _forecastService = LandslideDatabase();
   Map<String, int> _counts = {};
   bool _isLoading = true;
+  late String _currentTime;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _updateCurrentTime();
+  }
+
+  void _updateCurrentTime() {
+    final now = DateTime.now();
+    _currentTime = DateFormat('HH:mm dd/MM').format(now);
   }
 
   Future<void> _loadData() async {
@@ -43,15 +51,13 @@ class _DisasterWarningCardState extends State<DisasterWarningCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'DỰ BÁO LÚC: 08:26 NGÀY 17/08',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            Text(
+              'DỰ BÁO LÚC: $_currentTime',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             if (_isLoading)
-              const Center(
-                  child: CircularProgressIndicator(color: Colors.white))
+              const Center(child: CircularProgressIndicator(color: Colors.white))
             else ...[
               WarningRow(
                 icon: Icons.warning,

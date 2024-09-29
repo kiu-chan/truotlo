@@ -201,7 +201,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
 
     // Thêm hình ảnh cho điểm trượt lở
-    final ByteData bytes = await rootBundle.load('lib/assets/landslide.png');
+    final ByteData bytes = await rootBundle.load('lib/assets/map/landslide_0.png');
     final Uint8List list = bytes.buffer.asUint8List();
     await mapController.addImage("location_on", list);
 

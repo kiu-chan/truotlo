@@ -221,7 +221,7 @@ class MapUtils {
   Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
     await clearLandslidePointsOnMap();
 
-    await _mapController.addImage("location_on", await _loadImageFromAsset('lib/assets/landslide.png'));
+    await _mapController.addImage("location_on", await _loadImageFromAsset('lib/assets/map/landslide_0.png'));
 
     for (var point in points) {
       try {
@@ -332,7 +332,7 @@ Future<void> clearLandslidePointsOnMap() async {
     _destinationMarker = await _mapController.addSymbol(
       SymbolOptions(
         geometry: destination,
-        iconImage: 'lib/assets/landslide.png',
+        iconImage: 'lib/assets/map/landslide_0.png',
         iconSize: 0.15,
       ),
     );
