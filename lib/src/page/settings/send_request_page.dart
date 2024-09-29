@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truotlo/src/services/email_service.dart';
 
 class SendRequestPage extends StatefulWidget {
   const SendRequestPage({super.key});
@@ -28,13 +29,24 @@ class SendRequestPageState extends State<SendRequestPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate network request
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        await EmailService.sendEmail(
+          name: _nameController.text,
+          email: _emailController.text,
+          phone: _phoneController.text,
+          content: _contentController.text,
+        );
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      setState(() => _isLoading = false);
-      _showSuccessDialog();
+        setState(() => _isLoading = false);
+        _showSuccessDialog();
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() => _isLoading = false);
+        _showErrorDialog(e.toString());
+      }
     }
   }
 
@@ -50,6 +62,26 @@ class SendRequestPageState extends State<SendRequestPage> {
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String errorMessage) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Lỗi'),
+          content: Text('Có lỗi xảy ra khi gửi yêu cầu: $errorMessage'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
