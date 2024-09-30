@@ -140,7 +140,7 @@ class ChartPageState extends State<ChartPage> {
         backgroundColor: Colors.blue,
       ),
       endDrawer: ChartMenu(
-        chartNames: _chartDataList.map((c) => c.name).toList(),
+        chartNames: [..._chartDataList.map((c) => c.name), 'Đo nghiêng'],
         selectedChart: _selectedChart,
         showLegend: _showLegend,
         onChartTypeChanged: (value) {
@@ -167,108 +167,126 @@ class ChartPageState extends State<ChartPage> {
     }
     return RefreshIndicator(
       onRefresh: _fetchData,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _selectedChart,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                if (_isAdmin)
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _selectDateTimeRange,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 5,
-                      ),
-                      child: Text(
-                        ChartUtils.getDateRangeText(
-                            _startDateTime, _endDateTime),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _selectedChart,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                if (!_isAdmin)
-                  Center(
-                    child: Text(
-                      'Dữ liệu của 2 ngày gần nhất',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    AspectRatio(
-                      aspectRatio: 1.5,
-                      child: LineChart(
-                        ChartUtils.getLineChartData(
-                          _selectedChart,
-                          _chartDataList,
-                          _lineVisibility,
-                          _filteredData,
-                          _isAdmin,
+                  const SizedBox(height: 20),
+                  if (_isAdmin)
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: _selectDateTimeRange,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 5,
                         ),
-                      ),
-                    ),
-                    if (_showLegend) ...[
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Chú thích:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 400,
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: ChartUtils.buildLegendItems(
-                              _selectedChart,
-                              _lineVisibility,
-                              _chartDataList,
-                              _toggleLineVisibility,
-                              _isAdmin,
-                            ),
+                        child: Text(
+                          ChartUtils.getDateRangeText(
+                              _startDateTime, _endDateTime),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    ],
-                  ],
+                    ),
+                  if (!_isAdmin)
+                    Center(
+                      child: Text(
+                        'Dữ liệu của 2 ngày gần nhất',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            _buildChartContent(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartContent() {
+    if (_selectedChart == 'Đo nghiêng') {
+      return Column(
+        children: [
+          _buildSingleChart('Đo nghiêng, hướng Tây - Đông'),
+          const SizedBox(height: 20),
+          _buildSingleChart('Đo nghiêng, hướng Bắc - Nam'),
+        ],
+      );
+    } else {
+      return _buildSingleChart(_selectedChart);
+    }
+  }
+
+  Widget _buildSingleChart(String chartName) {
+    return Column(
+      children: [
+        Text(
+          chartName,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        AspectRatio(
+          aspectRatio: 1.5,
+          child: LineChart(
+            ChartUtils.getLineChartData(
+              chartName,
+              _chartDataList,
+              _lineVisibility,
+              _filteredData,
+              _isAdmin,
+            ),
+          ),
+        ),
+        if (_showLegend) ...[
+          const SizedBox(height: 20),
+          const Text(
+            'Chú thích:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 200,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: ChartUtils.buildLegendItems(
+                  chartName,
+                  _lineVisibility,
+                  _chartDataList,
+                  _toggleLineVisibility,
+                  _isAdmin,
                 ),
               ),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 

@@ -201,7 +201,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
 
     // Thêm hình ảnh cho điểm trượt lở
-    final ByteData bytes = await rootBundle.load('lib/assets/map/landslide_0.png');
+    final ByteData bytes =
+        await rootBundle.load('lib/assets/map/landslide_0.png');
     final Uint8List list = bytes.buffer.asUint8List();
     await mapController.addImage("location_on", list);
 
@@ -310,9 +311,46 @@ mixin MapState<T extends StatefulWidget> on State<T> {
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton.icon(
+                    icon: const Icon(Icons.map),
                     label: const Text('Mở trong Google Maps'),
                     onPressed: () => _openGoogleMaps(landslideLocation),
                   ),
+                  const SizedBox(height: 20),
+                  const Text('Hình ảnh:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  if (landslideDetail['images'] != null &&
+                      (landslideDetail['images'] as List).isNotEmpty)
+                    Column(
+                      children:
+                          (landslideDetail['images'] as List).map((image) {
+                        String imageUrl =
+                            'http://truotlobinhdinh.girc.edu.vn/storage/$image';
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Image.network(
+                            imageUrl,
+                            loadingBuilder: (BuildContext context, Widget child,
+                                ImageChunkEvent? loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Text('Không thể tải hình ảnh');
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    )
+                  else
+                    const Text('Không có hình ảnh'),
                 ],
               ),
             ),

@@ -77,8 +77,15 @@ class ChartUtils {
                   chartDataList.firstWhere((c) => c.name == selectedChart);
               String tooltipText;
               if (selectedChart.startsWith('Đo nghiêng')) {
-                tooltipText =
-                    'Độ sâu: ${flSpot.y.toStringAsFixed(0)}, Giá trị: ${flSpot.x.toStringAsFixed(3)}';
+                int dateIndex = barSpot.barIndex;
+                if (dateIndex >= 0 &&
+                    dateIndex < selectedChartData.dates.length) {
+                  String date = DateFormat('dd/MM/yyyy HH:mm')
+                      .format(selectedChartData.dates[dateIndex]);
+                  tooltipText = '$date: ${flSpot.x.toStringAsFixed(3)}';
+                } else {
+                  tooltipText = 'Giá trị: ${flSpot.x.toStringAsFixed(3)}';
+                }
               } else {
                 String date = DateFormat('dd/MM/yyyy HH:mm')
                     .format(selectedChartData.dates[flSpot.x.toInt()]);

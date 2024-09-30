@@ -14,17 +14,17 @@ class EmailService {
     final smtpServer = gmail(username, password);
 
     final message = Message()
-      ..from = Address(username, 'Email từ ứng dụng trượt lở')
-      ..recipients.add('21020342@vnu.edu.vn')
-      ..subject = 'New Request from $name'
+      ..from = Address(username, 'Email từ ứng dụng trượt lở Bình Định')
+      ..recipients.add('viendcnmtkhobac@gmail.com')
+      ..subject = 'Bạn có một thông báo từ $name - ứng dụng trượt lở Bình Định'
       ..text = '''
-A new request has been submitted:
+Các thông tin được liên hệ bao gồm:
 
-Name: $name
+Tên người gửi: $name
 Email: $email
-Phone: $phone
+Số điện thoại: $phone
 
-Content:
+Nội dung:
 $content
 ''';
 

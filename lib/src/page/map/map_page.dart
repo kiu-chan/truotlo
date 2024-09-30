@@ -76,12 +76,14 @@ class MapboxPageState extends State<MapboxPage> with MapState {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                const Text('Lớp hành chính:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Lớp hành chính:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 buildAdministrativeLegend('Ranh giới', Colors.pink),
                 buildAdministrativeLegend('Ranh giới huyện', Colors.black),
                 buildAdministrativeLegend('Ranh giới xã', Colors.grey),
                 const SizedBox(height: 16),
-                const Text('Điểm trượt lở:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Điểm trượt lở:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 buildLegend('no_risk', 'Không có nguy cơ'),
                 buildLegend('very_low', 'Rất thấp'),
                 buildLegend('low', 'Thấp'),
@@ -182,13 +184,15 @@ class MapboxPageState extends State<MapboxPage> with MapState {
           FloatingActionButton(
             onPressed: moveToCurrentLocation,
             heroTag: 'moveToCurrentLocation',
-            child: const Icon(Icons.my_location),
+            backgroundColor: Colors.white,
+            child: const Icon(Icons.my_location, color: Colors.blue),
           ),
           const SizedBox(height: 16),
           FloatingActionButton(
             onPressed: moveToDefaultLocation,
             heroTag: 'moveToDefaultLocation',
-            child: const Icon(Icons.home),
+            backgroundColor: Colors.white,
+            child: const Icon(Icons.home, color: Colors.blue),
           ),
         ],
       ),

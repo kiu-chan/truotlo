@@ -10,6 +10,7 @@ import 'package:truotlo/src/database/border.dart';
 import 'package:truotlo/src/database/district.dart';
 import 'package:truotlo/src/database/commune.dart';
 import 'package:truotlo/src/database/landslide.dart';
+import 'package:truotlo/src/database/about.dart';
 
 class DefaultDatabase {
   bool _connectionFailed = false;
@@ -19,6 +20,8 @@ class DefaultDatabase {
   late CommuneDatabase communeDatabase;
   late LandslideDatabase landslideDatabase;
   late AccountQueries accountQueries;
+  late AboutDatabase aboutDatabase;
+
 
   Future<void> connect() async {
     try {
@@ -29,6 +32,7 @@ class DefaultDatabase {
       communeDatabase = CommuneDatabase();
       landslideDatabase = LandslideDatabase();
       accountQueries = AccountQueries();
+      aboutDatabase = AboutDatabase();
     } catch (e) {
       print('Failed to connect to database: $e');
       _connectionFailed = true;
@@ -71,5 +75,9 @@ class DefaultDatabase {
 
   Future<List<String>> getAllDistricts() async {
     return await landslideDatabase.getAllDistricts();
+  }
+
+  Future<String> fetchAboutContent() async {
+    return await aboutDatabase.fetchAboutContent();
   }
 }
