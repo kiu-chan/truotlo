@@ -6,7 +6,6 @@ TableRow buildTableRow(List<dynamic> cells, {bool isHeader = false}) {
         .map((cell) => TableCell(
               child: Container(
                 padding: const EdgeInsets.all(8.0),
-                // color: isHeader ? Colors.white : null,
                 child: cell is Widget
                     ? cell
                     : Text(
@@ -48,7 +47,6 @@ Widget buildRiskIcon(String riskLevel) {
   }
 }
 
-
 Widget buildLegend(BuildContext context) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,15 +63,17 @@ Widget buildLegend(BuildContext context) {
       _buildLegendItem(context, 'medium', 'TRUNG BÌNH',
           'Cảnh báo phát sinh trượt lở cục bộ, chủ yếu trượt lở có quy mô nhỏ. Chủ động cảnh giác đối với các khu vực nguy hiểm.'),
       _buildLegendItem(context, 'high', 'CAO',
-          'Cảnh báo nguy cơ trượt lở trên diện rộng, có thể phát sinh trượt lở quy mô lớn. Theo dõi và sẵn sàng ứng phó ở các khu vực nguy hiểm.'),
+          'Cảnh báo nguy cơ trượt lở trên diện rộng, có thể phát sinh trượt lở quy mô lớn. Theo dõi và sẵn sàng ứng phó ở các khu vực nguy hiểm.',
+          boldLevel: true),
       _buildLegendItem(context, 'very_high', 'RẤT CAO',
-          'Trượt lở trên diện rộng, phát sinh trượt lở quy mô lớn. Di chuyển dân trong vùng nguy hiểm đến nơi an toàn'),
+          'Trượt lở trên diện rộng, phát sinh trượt lở quy mô lớn. Di chuyển dân trong vùng nguy hiểm đến nơi an toàn',
+          boldLevel: true),
     ],
   );
 }
 
 Widget _buildLegendItem(
-    BuildContext context, String riskLevel, String level, String description) {
+    BuildContext context, String riskLevel, String level, String description, {bool boldLevel = false}) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4.0),
     child: Row(
@@ -88,7 +88,10 @@ Widget _buildLegendItem(
               children: [
                 TextSpan(
                     text: '$level: ',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: boldLevel ? Colors.red : null,
+                    )),
                 TextSpan(text: description),
               ],
             ),

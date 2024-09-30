@@ -180,8 +180,7 @@ class ChartUtils {
         }
       }
 
-      // Thêm đường giá trị mặc định chỉ cho admin
-      if ((lineVisibility[-1] ?? false) && isAdmin) {
+      if (lineVisibility[-1] ?? false) {
         if (selectedChart == 'Đo nghiêng, hướng Tây - Đông') {
           lineBars.add(
             LineChartBarData(
@@ -322,12 +321,12 @@ class ChartUtils {
         );
       }).toList();
 
-      // Thêm mục chú thích giá trị mặc định chỉ cho admin
-      if (isAdmin && (lineVisibility[-1] ?? false)) {
+      // Thêm mục chú thích giá trị mặc định
+      if (lineVisibility[-1] ?? false) {
         legendItems.add(
           _buildLegendItem(
             Colors.black,
-            'Giá trị mặc định',
+            'Bắt đầu(19/11/2023)',
             -1,
             lineVisibility,
             toggleLineVisibility,

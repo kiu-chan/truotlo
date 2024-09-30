@@ -48,7 +48,7 @@ class WeatherForecastCard extends StatelessWidget {
                 return DropdownMenuItem<WeatherDistrict>(
                   value: district,
                   child: Text(district.name,
-                      style: const TextStyle(color: Colors.white)),
+                      style: const TextStyle(color: Colors.black)),
                 );
               }).toList(),
               onChanged: onDistrictChanged,
@@ -61,7 +61,7 @@ class WeatherForecastCard extends StatelessWidget {
                 return DropdownMenuItem<Ward>(
                   value: ward,
                   child: Text(ward.name,
-                      style: const TextStyle(color: Colors.white)),
+                      style: const TextStyle(color: Colors.black)),
                 );
               }).toList(),
               onChanged: onWardChanged,

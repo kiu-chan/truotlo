@@ -34,6 +34,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   bool isLandslidePointsVisible = true;
   List<District> districts = [];
   Set<String> allDistricts = {};
+  List<Symbol> _districtLabels = [];
+  List<Symbol> _communeLabels = [];
   List<List<LatLng>> borderPolygons = [];
   List<Commune> communes = [];
   List<LandslidePoint> landslidePoints = [];
@@ -92,6 +94,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         setState(() {});
         if (_isMapInitialized) {
           await _mapUtils.drawDistrictsOnMap(districts);
+          await _drawDistrictLabels();
         }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu huyện: $e');
@@ -246,6 +249,32 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
+  double calculateDistance(LatLng start, LatLng end) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a = 0.5 -
+        c((end.latitude - start.latitude) * p) / 2 +
+        c(start.latitude * p) *
+            c(end.latitude * p) *
+            (1 - c((end.longitude - start.longitude) * p)) /
+            2;
+    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+  }
+
+  String convertToDMS(double coordinate, bool isLatitude) {
+    String direction = isLatitude
+        ? (coordinate >= 0 ? "N" : "S")
+        : (coordinate >= 0 ? "E" : "W");
+
+    coordinate = coordinate.abs();
+    int degrees = coordinate.floor();
+    double minutesDecimal = (coordinate - degrees) * 60;
+    int minutes = minutesDecimal.floor();
+    double seconds = (minutesDecimal - minutes) * 60;
+
+    return "${degrees.toString().padLeft(3, '0')}° ${minutes.toString().padLeft(2, '0')}' ${seconds.toStringAsFixed(2).padLeft(5, '0')}\" $direction";
+  }
+
   // Phương thức hiển thị hộp thoại chi tiết điểm trượt lở
   void showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
     LatLng landslideLocation;
@@ -268,7 +297,6 @@ mixin MapState<T extends StatefulWidget> on State<T> {
             content: SingleChildScrollView(
               child: ListBody(
                 children: <Widget>[
-                  Text('ID: ${landslideDetail['id']}'),
                   Text('Vị trí: ${landslideDetail['vi_tri']}'),
                   Text(
                       'Xã: ${landslideDetail['commune_name'] ?? landslideDetail['ten_xa'] ?? 'Không có thông tin'}'),
@@ -276,7 +304,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
                       'Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
                   Text('Mô tả: ${landslideDetail['mo_ta']}'),
                   Text(
-                      'Tọa độ: ${landslideDetail['lat']}, ${landslideDetail['lon']}'),
+                    'Tọa độ: Kinh độ ${convertToDMS(landslideDetail['lon'], false)}, Vĩ độ ${convertToDMS(landslideDetail['lat'], true)}',
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     child: const Text('Khoảng cách theo đường chim bay'),
@@ -524,6 +553,73 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     );
   }
 
+  Future<void> _drawDistrictLabels() async {
+    await _removeDistrictLabels();
+    for (var district in districts) {
+      LatLng center = _calculatePolygonCenter(district.polygons);
+      Symbol symbol = await mapController.addSymbol(
+        SymbolOptions(
+          geometry: center,
+          textField: district.name,
+          textOffset: const Offset(0, 0.8),
+          textAnchor: 'top',
+          textSize: 16, // Tăng kích thước chữ
+          textColor: '#000000',
+          textHaloColor: '#FFFFFF', // Thêm viền trắng xung quanh chữ
+          textHaloWidth: 2, // Độ rộng của viền
+        ),
+      );
+      _districtLabels.add(symbol);
+    }
+  }
+
+  Future<void> _removeDistrictLabels() async {
+    for (var symbol in _districtLabels) {
+      await mapController.removeSymbol(symbol);
+    }
+    _districtLabels.clear();
+  }
+
+  Future<void> _drawCommuneLabels() async {
+    await _removeCommuneLabels();
+    for (var commune in communes) {
+      LatLng center = _calculatePolygonCenter(commune.polygons);
+      Symbol symbol = await mapController.addSymbol(
+        SymbolOptions(
+          geometry: center,
+          textField: commune.name,
+          textOffset: const Offset(0, 0.8),
+          textAnchor: 'top',
+          textSize: 10,
+          textColor: '#000000',
+        ),
+      );
+      _communeLabels.add(symbol);
+    }
+  }
+
+  Future<void> _removeCommuneLabels() async {
+    for (var symbol in _communeLabels) {
+      await mapController.removeSymbol(symbol);
+    }
+    _communeLabels.clear();
+  }
+
+  LatLng _calculatePolygonCenter(List<List<LatLng>> polygons) {
+    double sumLat = 0, sumLng = 0;
+    int totalPoints = 0;
+
+    for (var polygon in polygons) {
+      for (var point in polygon) {
+        sumLat += point.latitude;
+        sumLng += point.longitude;
+        totalPoints++;
+      }
+    }
+
+    return LatLng(sumLat / totalPoints, sumLng / totalPoints);
+  }
+
   // Phương thức chuyển đổi hiển thị các huyện
   void toggleDistrictsVisibility(bool? value) async {
     if (value != null) {
@@ -534,6 +630,12 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         await _fetchDistricts();
       } else {
         await _mapUtils.toggleAllDistrictsVisibility(value);
+      }
+
+      if (isDistrictsVisible) {
+        await _drawDistrictLabels();
+      } else {
+        await _removeDistrictLabels();
       }
     }
   }
@@ -562,6 +664,12 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         await _fetchCommunes();
       } else {
         await _mapUtils.toggleCommunesVisibility(value);
+      }
+
+      if (isCommunesVisible) {
+        await _drawCommuneLabels();
+      } else {
+        await _removeCommuneLabels();
       }
     }
   }
