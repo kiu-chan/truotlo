@@ -60,31 +60,41 @@ class LandslideDataModel {
       id: json['id'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
-      batteryVoltage: double.parse(json['Batt(Volts)']),
-      temperatureDatalogger: double.parse(json['Temp_Dataloger(Celsius)']),
-      pz1Digit: json['PZ1_(Digit)'],
-      pz2Digit: json['PZ2_(Digit)'],
-      cr1Digit: json['CR1_(Digit)'],
-      cr2Digit: json['CR2_(Digit)'],
-      cr3Digit: json['CR3_(Digit)'],
-      tiltAOr1: json['Tilt_A_Or_1(sin)'],
-      tiltBOr1: json['Tilt_B_Or_1(sin)'],
-      tiltAOr2: json['Tilt_A_Or_2(sin)'],
-      tiltBOr2: json['Tilt_B_Or_2(sin)'],
-      tiltAOr3: json['Tilt_A_Or_3(sin)'],
-      tiltBOr3: json['Tilt_B_Or_3(sin)'],
-      pz1Temp: double.parse(json['PZ1_Temp']),
-      pz2Temp: double.parse(json['PZ2_Temp']),
-      cr1Temp: double.parse(json['CR1_Temp']),
-      cr2Temp: double.parse(json['CR2_Temp']),
-      cr3Temp: double.parse(json['CR3_Temp']),
-      tilt1Temp: double.parse(json['Tilt_1_Temp']),
-      tilt2Temp: double.parse(json['Tilt_2_Temp']),
-      tilt3Temp: double.parse(json['Tilt_3_Temp']),
+      batteryVoltage: _parseDouble(json['Batt(Volts)']),
+      temperatureDatalogger: _parseDouble(json['Temp_Dataloger(Celsius)']),
+      pz1Digit: _parseDouble(json['PZ1_(Digit)']),
+      pz2Digit: _parseDouble(json['PZ2_(Digit)']),
+      cr1Digit: _parseDouble(json['CR1_(Digit)']),
+      cr2Digit: _parseDouble(json['CR2_(Digit)']),
+      cr3Digit: _parseDouble(json['CR3_(Digit)']),
+      tiltAOr1: _parseDouble(json['Tilt_A_Or_1(sin)']),
+      tiltBOr1: _parseDouble(json['Tilt_B_Or_1(sin)']),
+      tiltAOr2: _parseDouble(json['Tilt_A_Or_2(sin)']),
+      tiltBOr2: _parseDouble(json['Tilt_B_Or_2(sin)']),
+      tiltAOr3: _parseDouble(json['Tilt_A_Or_3(sin)']),
+      tiltBOr3: _parseDouble(json['Tilt_B_Or_3(sin)']),
+      pz1Temp: _parseDouble(json['PZ1_Temp']),
+      pz2Temp: _parseDouble(json['PZ2_Temp']),
+      cr1Temp: _parseDouble(json['CR1_Temp']),
+      cr2Temp: _parseDouble(json['CR2_Temp']),
+      cr3Temp: _parseDouble(json['CR3_Temp']),
+      tilt1Temp: _parseDouble(json['Tilt_1_Temp']),
+      tilt2Temp: _parseDouble(json['Tilt_2_Temp']),
+      tilt3Temp: _parseDouble(json['Tilt_3_Temp']),
     );
   }
 
-  // Các phương thức tính toán có thể được thêm vào đây nếu cần
+  // Hàm helper để parse giá trị double từ chuỗi hoặc số
+  static double _parseDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    } else if (value is String) {
+      return double.parse(value);
+    }
+    throw FormatException('Cannot parse $value to double');
+  }
+
+  // Các phương thức tính toán
   double get calculatedTiltAOr1 => 500 * (tiltAOr1 - (-0.001565));
   double get calculatedTiltAOr2 => 500 * (tiltAOr2 - 0.009616);
   double get calculatedTiltAOr3 => 500 * (tiltAOr3 - 0.000935);
@@ -96,4 +106,41 @@ class LandslideDataModel {
   double get calculatedCR1Digit => 0.0452854 * (cr1Digit - 4645.767);
   double get calculatedCR2Digit => 0.0456835 * (cr2Digit - 6104.228);
   double get calculatedCR3Digit => 0.0452898 * (cr3Digit - 4722.004);
+}
+
+class LandslideDataService {
+  static final String _baseApi = ChartConfig().chartApi;
+
+  Future<List<LandslideDataModel>> fetchLandslideData({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    String endpoint;
+    if (startDate != null && endDate != null) {
+      String formattedStartDate = _formatDate(startDate);
+      String formattedEndDate = _formatDate(endDate);
+      String formattedStartTime = _formatTime(startDate);
+      String formattedEndTime = _formatTime(endDate);
+      endpoint = '$_baseApi/filtered-data?start_date=$formattedStartDate&start_time=$formattedStartTime&end_date=$formattedEndDate&end_time=$formattedEndTime';
+    } else {
+      endpoint = '$_baseApi/latest-48-data';
+    }
+
+    final response = await http.get(Uri.parse(endpoint));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = json.decode(response.body);
+      return jsonData.map((item) => LandslideDataModel.fromJson(item)).toList();
+    } else {
+      throw Exception('Không thể tải dữ liệu trượt lở');
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _formatTime(DateTime date) {
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
 }

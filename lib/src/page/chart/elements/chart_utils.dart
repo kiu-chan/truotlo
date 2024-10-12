@@ -5,8 +5,7 @@ import 'package:truotlo/src/data/chart/chart_data.dart';
 import 'package:truotlo/src/data/chart/landslide_data.dart';
 
 class ChartUtils {
-  static void initLineVisibility(
-      Map<int, bool> lineVisibility, int dataLength) {
+  static void initLineVisibility(Map<int, bool> lineVisibility, int dataLength) {
     lineVisibility.clear();
     for (int i = 0; i < dataLength; i++) {
       lineVisibility[i] = true;
@@ -15,39 +14,32 @@ class ChartUtils {
   }
 
   static DateTime combineDateAndTime(DateTime date, TimeOfDay time) {
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
   static List<LandslideDataModel> filterDataByDateRange(
-      List<LandslideDataModel> allData,
-      DateTime? startDateTime,
-      DateTime? endDateTime) {
+    List<LandslideDataModel> allData,
+    DateTime? startDateTime,
+    DateTime? endDateTime
+  ) {
     if (startDateTime != null && endDateTime != null) {
       return allData.where((d) {
         final dataDate = DateTime.parse(d.createdAt);
-        final adjustedStartDateTime =
-            startDateTime.add(const Duration(hours: 7));
+        final adjustedStartDateTime = startDateTime.add(const Duration(hours: 7));
         final adjustedEndDateTime = endDateTime.add(const Duration(hours: 7));
         return dataDate.isAfter(adjustedStartDateTime) &&
-            dataDate.isBefore(adjustedEndDateTime.add(const Duration(days: 1)));
+               dataDate.isBefore(adjustedEndDateTime.add(const Duration(days: 1)));
       }).toList();
     } else {
       return List.from(allData);
     }
   }
 
-  static String getDateRangeText(
-      DateTime? startDateTime, DateTime? endDateTime) {
+  static String getDateRangeText(DateTime? startDateTime, DateTime? endDateTime) {
     if (startDateTime != null && endDateTime != null) {
-      return 'Từ ${DateFormat('dd/MM/yyyy HH:mm').format(startDateTime)} đến ${DateFormat('dd/MM/yyyy HH:mm').format(endDateTime)}';
+      return 'từ ${DateFormat('dd/MM/yyyy HH:mm').format(startDateTime).toLowerCase()} đến ${DateFormat('dd/MM/yyyy HH:mm').format(endDateTime).toLowerCase()}';
     } else {
-      return 'Chọn khoảng thời gian';
+      return 'chọn khoảng thời gian';
     }
   }
 
@@ -59,8 +51,7 @@ class ChartUtils {
     bool isAdmin,
   ) {
     return LineChartData(
-      lineBarsData: _getLineBarsData(
-          selectedChart, chartDataList, lineVisibility, isAdmin),
+      lineBarsData: _getLineBarsData(selectedChart, chartDataList, lineVisibility, isAdmin),
       titlesData: _getTitlesData(selectedChart, filteredData, chartDataList),
       gridData: const FlGridData(show: true),
       borderData: FlBorderData(show: true),
@@ -73,22 +64,18 @@ class ChartUtils {
                 return null;
               }
 
-              ChartData selectedChartData =
-                  chartDataList.firstWhere((c) => c.name == selectedChart);
+              ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
               String tooltipText;
               if (selectedChart.startsWith('Đo nghiêng')) {
                 int dateIndex = barSpot.barIndex;
-                if (dateIndex >= 0 &&
-                    dateIndex < selectedChartData.dates.length) {
-                  String date = DateFormat('dd/MM/yyyy HH:mm')
-                      .format(selectedChartData.dates[dateIndex]);
+                if (dateIndex >= 0 && dateIndex < selectedChartData.dates.length) {
+                  String date = DateFormat('dd/MM/yyyy HH:mm').format(selectedChartData.dates[dateIndex]).toLowerCase();
                   tooltipText = '$date: ${flSpot.x.toStringAsFixed(3)}';
                 } else {
-                  tooltipText = 'Giá trị: ${flSpot.x.toStringAsFixed(3)}';
+                  tooltipText = 'giá trị: ${flSpot.x.toStringAsFixed(3)}';
                 }
               } else {
-                String date = DateFormat('dd/MM/yyyy HH:mm')
-                    .format(selectedChartData.dates[flSpot.x.toInt()]);
+                String date = DateFormat('dd/MM/yyyy HH:mm').format(selectedChartData.dates[flSpot.x.toInt()]).toLowerCase();
                 tooltipText = '$date: ${flSpot.y.toStringAsFixed(2)}';
               }
 
@@ -102,27 +89,7 @@ class ChartUtils {
           fitInsideHorizontally: true,
           fitInsideVertically: true,
         ),
-        touchCallback: (FlTouchEvent event, LineTouchResponse? touchResponse) {
-          // Custom touch callback if needed
-        },
         handleBuiltInTouches: true,
-        getTouchedSpotIndicator:
-            (LineChartBarData barData, List<int> spotIndexes) {
-          return spotIndexes.map((spotIndex) {
-            return TouchedSpotIndicatorData(
-              const FlLine(color: Colors.white, strokeWidth: 2),
-              FlDotData(
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
-                    radius: 4,
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  );
-                },
-              ),
-            );
-          }).toList();
-        },
       ),
     );
   }
@@ -133,24 +100,15 @@ class ChartUtils {
     Map<int, bool> lineVisibility,
     bool isAdmin,
   ) {
-    ChartData selectedChartData =
-        chartDataList.firstWhere((c) => c.name == selectedChart);
+    ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
     List<LineChartBarData> lineBars = [];
 
-    if ([
-      'Piezometer 1',
-      'Piezometer 2',
-      'Crackmeter 1',
-      'Crackmeter 2',
-      'Crackmeter 3'
-    ].contains(selectedChart)) {
+    if (['Piezometer 1', 'Piezometer 2', 'Crackmeter 1', 'Crackmeter 2', 'Crackmeter 3'].contains(selectedChart)) {
       if (lineVisibility[0] ?? false) {
         lineBars.add(
           LineChartBarData(
-            spots:
-                List.generate(selectedChartData.dataPoints[0].length, (index) {
-              return FlSpot(
-                  index.toDouble(), selectedChartData.dataPoints[0][index]);
+            spots: List.generate(selectedChartData.dataPoints[0].length, (index) {
+              return FlSpot(index.toDouble(), selectedChartData.dataPoints[0][index]);
             }),
             isCurved: true,
             curveSmoothness: 0.35,
@@ -220,49 +178,48 @@ class ChartUtils {
     return lineBars;
   }
 
-  static FlTitlesData _getTitlesData(String selectedChart,
-      List<LandslideDataModel> filteredData, List<ChartData> chartDataList) {
+  static FlTitlesData _getTitlesData(
+    String selectedChart,
+    List<LandslideDataModel> filteredData,
+    List<ChartData> chartDataList
+  ) {
     return FlTitlesData(
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 60,
           getTitlesWidget: (value, meta) {
-            if ([
-              'Piezometer 1',
-              'Piezometer 2',
-              'Crackmeter 1',
-              'Crackmeter 2',
-              'Crackmeter 3'
-            ].contains(selectedChart)) {
-              ChartData selectedChartData =
-                  chartDataList.firstWhere((c) => c.name == selectedChart);
-              int index = value.toInt();
-              if (index >= 0 &&
-                  index < selectedChartData.dates.length &&
-                  index % (selectedChartData.dates.length ~/ 5) == 0) {
+            if (selectedChart.startsWith('Đo nghiêng')) {
+              List<double> fixedValues = [-0.5, -0.3, -0.1, 0, 0.1];
+              int index = fixedValues.indexWhere((v) => (v - value).abs() < 0.001);
+              if (index != -1) {
                 return Transform.rotate(
                   angle: -45 * 3.14 / 180,
                   child: Text(
-                    DateFormat('dd/MM HH:mm')
-                        .format(selectedChartData.dates[index]),
+                    fixedValues[index].toStringAsFixed(1).toLowerCase(),
                     style: const TextStyle(fontSize: 10),
                   ),
                 );
               }
-              return const Text('');
-            } else if (selectedChart.startsWith('Đo nghiêng')) {
-              // Hiển thị giá trị đo nghiêng trên trục x
-              return Text(
-                value.toStringAsFixed(3),
-                style: const TextStyle(fontSize: 10),
-              );
+            } else {
+              ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
+              int dataLength = selectedChartData.dates.length;
+              List<int> indicesToShow = [0, dataLength ~/ 4, dataLength ~/ 2, (3 * dataLength) ~/ 4, dataLength - 1];
+              
+              int index = value.toInt();
+              if (indicesToShow.contains(index)) {
+                return Transform.rotate(
+                  angle: -45 * 3.14 / 180,
+                  child: Text(
+                    DateFormat('dd/MM HH:mm').format(selectedChartData.dates[index]).toLowerCase(),
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                );
+              }
             }
-            return Text(value.truncateToDouble() == value
-                ? value.toStringAsFixed(0)
-                : value.toStringAsFixed(2));
+            return const Text('');
           },
-          interval: selectedChart.startsWith('Đo nghiêng') ? 0.1 : null,
+          interval: 1,
         ),
       ),
       leftTitles: AxisTitles(
@@ -275,12 +232,18 @@ class ChartUtils {
               if (depthValues.contains(value)) {
                 return Text(value.toStringAsFixed(0));
               }
-              return const Text('');
             } else {
-              return Text(value.truncateToDouble() == value
-                  ? value.toStringAsFixed(0)
-                  : value.toStringAsFixed(2));
+              ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
+              double minY = selectedChartData.dataPoints[0].reduce((a, b) => a < b ? a : b);
+              double maxY = selectedChartData.dataPoints[0].reduce((a, b) => a > b ? a : b);
+              double range = maxY - minY;
+              List<double> yValues = List.generate(5, (index) => minY + (range / 4) * index);
+              
+              if (yValues.any((y) => (y - value).abs() < 0.001)) {
+                return Text(value.toStringAsFixed(2));
+              }
             }
+            return const Text('');
           },
           interval: 1,
         ),
@@ -297,36 +260,24 @@ class ChartUtils {
     Function(int) toggleLineVisibility,
     bool isAdmin,
   ) {
-    if ([
-      'Piezometer 1',
-      'Piezometer 2',
-      'Crackmeter 1',
-      'Crackmeter 2',
-      'Crackmeter 3'
-    ].contains(selectedChart)) {
-      return [
-        _buildLegendItem(
-            Colors.blue, selectedChart, 0, lineVisibility, toggleLineVisibility)
-      ];
+    if (['Piezometer 1', 'Piezometer 2', 'Crackmeter 1', 'Crackmeter 2', 'Crackmeter 3'].contains(selectedChart)) {
+      return [_buildLegendItem(Colors.blue, selectedChart.toLowerCase(), 0, lineVisibility, toggleLineVisibility)];
     } else {
-      var legendItems =
-          lineVisibility.entries.where((entry) => entry.key != -1).map((entry) {
+      var legendItems = lineVisibility.entries.where((entry) => entry.key != -1).map((entry) {
         return _buildLegendItem(
           Colors.primaries[entry.key % Colors.primaries.length],
-          DateFormat('dd/MM/yyyy HH:mm')
-              .format(chartDataList[0].dates[entry.key]),
+          DateFormat('dd/MM/yyyy HH:mm').format(chartDataList[0].dates[entry.key]).toLowerCase(),
           entry.key,
           lineVisibility,
           toggleLineVisibility,
         );
       }).toList();
 
-      // Thêm mục chú thích giá trị mặc định
       if (lineVisibility[-1] ?? false) {
         legendItems.add(
           _buildLegendItem(
             Colors.black,
-            'Bắt đầu(19/11/2023)',
+            'bắt đầu(19/11/2023)',
             -1,
             lineVisibility,
             toggleLineVisibility,
@@ -360,11 +311,8 @@ class ChartUtils {
             Text(
               label,
               style: TextStyle(
-                color:
-                    lineVisibility[index] ?? true ? Colors.black : Colors.grey,
-                decoration: lineVisibility[index] ?? true
-                    ? TextDecoration.none
-                    : TextDecoration.lineThrough,
+                color: lineVisibility[index] ?? true ? Colors.black : Colors.grey,
+                decoration: lineVisibility[index] ?? true ? TextDecoration.none : TextDecoration.lineThrough,
               ),
             ),
           ],
@@ -373,10 +321,7 @@ class ChartUtils {
     );
   }
 
-  static List<LandslideDataModel> filterDataBasedOnUserRole(
-    List<LandslideDataModel> allData,
-    bool isAdmin,
-  ) {
+  static List<LandslideDataModel> filterDataBasedOnUserRole(List<LandslideDataModel> allData, bool isAdmin) {
     if (isAdmin) {
       return List.from(allData);
     } else {
