@@ -4,22 +4,21 @@ import 'package:truotlo/src/config/chart.dart';
 
 class LandslideDataModel {
   final int id;
-  final String rawContent;
   final String createdAt;
   final String updatedAt;
   final double batteryVoltage;
   final double temperatureDatalogger;
-  final double calculatedTiltAOr1;
-  final double calculatedTiltAOr2;
-  final double calculatedTiltAOr3;
-  final double calculatedTiltBOr1;
-  final double calculatedTiltBOr2;
-  final double calculatedTiltBOr3;
-  final double calculatedPZ1Digit;
-  final double calculatedPZ2Digit;
-  final double calculatedCR1Digit;
-  final double calculatedCR2Digit;
-  final double calculatedCR3Digit;
+  final double pz1Digit;
+  final double pz2Digit;
+  final double cr1Digit;
+  final double cr2Digit;
+  final double cr3Digit;
+  final double tiltAOr1;
+  final double tiltBOr1;
+  final double tiltAOr2;
+  final double tiltBOr2;
+  final double tiltAOr3;
+  final double tiltBOr3;
   final double pz1Temp;
   final double pz2Temp;
   final double cr1Temp;
@@ -31,22 +30,21 @@ class LandslideDataModel {
 
   LandslideDataModel({
     required this.id,
-    required this.rawContent,
     required this.createdAt,
     required this.updatedAt,
     required this.batteryVoltage,
     required this.temperatureDatalogger,
-    required this.calculatedTiltAOr1,
-    required this.calculatedTiltAOr2,
-    required this.calculatedTiltAOr3,
-    required this.calculatedTiltBOr1,
-    required this.calculatedTiltBOr2,
-    required this.calculatedTiltBOr3,
-    required this.calculatedPZ1Digit,
-    required this.calculatedPZ2Digit,
-    required this.calculatedCR1Digit,
-    required this.calculatedCR2Digit,
-    required this.calculatedCR3Digit,
+    required this.pz1Digit,
+    required this.pz2Digit,
+    required this.cr1Digit,
+    required this.cr2Digit,
+    required this.cr3Digit,
+    required this.tiltAOr1,
+    required this.tiltBOr1,
+    required this.tiltAOr2,
+    required this.tiltBOr2,
+    required this.tiltAOr3,
+    required this.tiltBOr3,
     required this.pz1Temp,
     required this.pz2Temp,
     required this.cr1Temp,
@@ -58,65 +56,44 @@ class LandslideDataModel {
   });
 
   factory LandslideDataModel.fromJson(Map<String, dynamic> json) {
-    final parsedContent = _parseRawContent(json['raw_content']);
     return LandslideDataModel(
       id: json['id'],
-      rawContent: json['raw_content'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
-      batteryVoltage: parsedContent['Batt(Volts)'] ?? 0,
-      temperatureDatalogger: parsedContent['Temp_Dataloger(Celsius)'] ?? 0,
-      calculatedTiltAOr1: 500 * ((parsedContent['Tilt_A_Or_1(sin)'] ?? 0) - (-0.001565)),
-      calculatedTiltAOr2: 500 * ((parsedContent['Tilt_A_Or_2(sin)'] ?? 0) - 0.009616),
-      calculatedTiltAOr3: 500 * ((parsedContent['Tilt_A_Or_3(sin)'] ?? 0) - 0.000935),
-      calculatedTiltBOr1: 500 * ((parsedContent['Tilt_B_Or_1(sin)'] ?? 0) - (-0.03261)),
-      calculatedTiltBOr2: 500 * ((parsedContent['Tilt_B_Or_2(sin)'] ?? 0) - (-0.053559)),
-      calculatedTiltBOr3: 500 * ((parsedContent['Tilt_B_Or_3(sin)'] ?? 0) - (-0.032529)),
-      calculatedPZ1Digit: -0.09763 * ((parsedContent['PZ1_(Digit)'] ?? 0) - 9338.196),
-      calculatedPZ2Digit: -0.0953721 * ((parsedContent['PZ2_(Digit)'] ?? 0) - 9952.377),
-      calculatedCR1Digit: 0.0452854 * ((parsedContent['CR1_(Digit)'] ?? 0) - 4645.767),
-      calculatedCR2Digit: 0.0456835 * ((parsedContent['CR2_(Digit)'] ?? 0) - 6104.228),
-      calculatedCR3Digit: 0.0452898 * ((parsedContent['CR3_(Digit)'] ?? 0) - 4722.004),
-      pz1Temp: parsedContent['PZ1_Temp'] ?? 0,
-      pz2Temp: parsedContent['PZ2_Temp'] ?? 0,
-      cr1Temp: parsedContent['CR1_Temp'] ?? 0,
-      cr2Temp: parsedContent['CR2_Temp'] ?? 0,
-      cr3Temp: parsedContent['CR3_Temp'] ?? 0,
-      tilt1Temp: parsedContent['Tilt_1_Temp'] ?? 0,
-      tilt2Temp: parsedContent['Tilt_2_Temp'] ?? 0,
-      tilt3Temp: parsedContent['Tilt_3_Temp'] ?? 0,
+      batteryVoltage: double.parse(json['Batt(Volts)']),
+      temperatureDatalogger: double.parse(json['Temp_Dataloger(Celsius)']),
+      pz1Digit: json['PZ1_(Digit)'],
+      pz2Digit: json['PZ2_(Digit)'],
+      cr1Digit: json['CR1_(Digit)'],
+      cr2Digit: json['CR2_(Digit)'],
+      cr3Digit: json['CR3_(Digit)'],
+      tiltAOr1: json['Tilt_A_Or_1(sin)'],
+      tiltBOr1: json['Tilt_B_Or_1(sin)'],
+      tiltAOr2: json['Tilt_A_Or_2(sin)'],
+      tiltBOr2: json['Tilt_B_Or_2(sin)'],
+      tiltAOr3: json['Tilt_A_Or_3(sin)'],
+      tiltBOr3: json['Tilt_B_Or_3(sin)'],
+      pz1Temp: double.parse(json['PZ1_Temp']),
+      pz2Temp: double.parse(json['PZ2_Temp']),
+      cr1Temp: double.parse(json['CR1_Temp']),
+      cr2Temp: double.parse(json['CR2_Temp']),
+      cr3Temp: double.parse(json['CR3_Temp']),
+      tilt1Temp: double.parse(json['Tilt_1_Temp']),
+      tilt2Temp: double.parse(json['Tilt_2_Temp']),
+      tilt3Temp: double.parse(json['Tilt_3_Temp']),
     );
   }
 
-  static Map<String, double> _parseRawContent(String rawContent) {
-    final Map<String, double> parsedData = {};
-    final List<String> parts = rawContent.split(';');
-
-    for (String part in parts) {
-      final List<String> keyValue = part.split(',');
-      if (keyValue.length == 2) {
-        String key = keyValue[0].trim();
-        double value = double.tryParse(keyValue[1].trim()) ?? 0;
-        parsedData[key] = value;
-      }
-    }
-
-    return parsedData;
-  }
-}
-
-class LandslideDataService {
-  static final String _baseApi = ChartConfig().chartApi;
-
-  Future<List<LandslideDataModel>> fetchLandslideData() async {
-    final response = await http.get(Uri.parse(_baseApi));
-
-    if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
-      final List<dynamic> dataList = jsonData['data'];
-      return dataList.map((item) => LandslideDataModel.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to load landslide data');
-    }
-  }
+  // Các phương thức tính toán có thể được thêm vào đây nếu cần
+  double get calculatedTiltAOr1 => 500 * (tiltAOr1 - (-0.001565));
+  double get calculatedTiltAOr2 => 500 * (tiltAOr2 - 0.009616);
+  double get calculatedTiltAOr3 => 500 * (tiltAOr3 - 0.000935);
+  double get calculatedTiltBOr1 => 500 * (tiltBOr1 - (-0.03261));
+  double get calculatedTiltBOr2 => 500 * (tiltBOr2 - (-0.053559));
+  double get calculatedTiltBOr3 => 500 * (tiltBOr3 - (-0.032529));
+  double get calculatedPZ1Digit => -0.09763 * (pz1Digit - 9338.196);
+  double get calculatedPZ2Digit => -0.0953721 * (pz2Digit - 9952.377);
+  double get calculatedCR1Digit => 0.0452854 * (cr1Digit - 4645.767);
+  double get calculatedCR2Digit => 0.0456835 * (cr2Digit - 6104.228);
+  double get calculatedCR3Digit => 0.0452898 * (cr3Digit - 4722.004);
 }

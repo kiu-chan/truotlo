@@ -1,17 +1,47 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:truotlo/src/config/chart.dart';
+import 'package:truotlo/src/data/chart/landslide_data.dart';
+import 'package:truotlo/src/user/auth_service.dart';
 import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
-import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/data/manage/landslide_point.dart';
-import 'package:truotlo/src/config/api.dart';
+import 'package:truotlo/src/data/map/landslide_point.dart';
 
 class LandslideDatabase {
-  final String baseUrl = ApiConfig().getApiUrl();
-  final ApiConfig apiConfig = ApiConfig();
+  static const String _baseUrl = 'https://truotlobinhdinh.girc.edu.vn/api';
+
+  Future<List<LandslideDataModel>> fetchLandslideData({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    String endpoint;
+    bool isLoggedIn = await UserPreferences.isLoggedIn();
+
+    if (startDate != null && endDate != null) {
+      String formattedStartDate = _formatDate(startDate);
+      String formattedEndDate = _formatDate(endDate);
+      String formattedStartTime = _formatTime(startDate);
+      String formattedEndTime = _formatTime(endDate);
+
+      endpoint = '$_baseUrl/filtered-data?start_date=$formattedStartDate&start_time=$formattedStartTime&end_date=$formattedEndDate&end_time=$formattedEndTime';
+    } else {
+      endpoint = isLoggedIn ? '$_baseUrl/latest-100-data' : '$_baseUrl/latest-48-data';
+    }
+    print(endpoint);
+
+    final response = await http.get(Uri.parse(endpoint));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = json.decode(response.body);
+      return jsonData.map((item) => LandslideDataModel.fromJson(item)).toList();
+    } else {
+      throw Exception('Không thể tải dữ liệu trượt lở');
+    }
+  }
 
   Future<List<LandslidePoint>> fetchLandslidePoints() async {
-    final response = await http.get(Uri.parse('$baseUrl/landslides'));
+    final response = await http.get(Uri.parse('$_baseUrl/landslides'));
 
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = json.decode(response.body);
@@ -21,8 +51,16 @@ class LandslideDatabase {
     }
   }
 
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _formatTime(DateTime date) {
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   Future<Map<String, dynamic>> fetchLandslideDetail(int id) async {
-    final response = await http.get(Uri.parse('$baseUrl/landslides/$id'));
+    final response = await http.get(Uri.parse('$_baseUrl/landslides/$id'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body);
@@ -32,7 +70,7 @@ class LandslideDatabase {
   }
 
   Future<List<HourlyWarning>> fetchHourlyWarnings() async {
-    final response = await http.get(Uri.parse('$baseUrl/hourly-warnings'));
+    final response = await http.get(Uri.parse('$_baseUrl/hourly-warnings'));
 
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = json.decode(response.body);
@@ -43,7 +81,7 @@ class LandslideDatabase {
   }
 
   Future<List<Forecast>> fetchForecasts() async {
-    final response = await http.get(Uri.parse('$baseUrl/forecasts'));
+    final response = await http.get(Uri.parse('$_baseUrl/forecasts'));
 
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = json.decode(response.body);
@@ -54,7 +92,7 @@ class LandslideDatabase {
   }
 
   Future<ForecastDetail> fetchForecastDetail(int id) async {
-    final response = await http.get(Uri.parse('$baseUrl/forecasts/$id'));
+    final response = await http.get(Uri.parse('$_baseUrl/forecasts/$id'));
 
     if (response.statusCode == 200) {
       Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -65,21 +103,18 @@ class LandslideDatabase {
   }
 
   Future<List<ManageLandslidePoint>> fetchListLandslidePoints() async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/manage-landslide-points'));
+    final response = await http.get(Uri.parse('$_baseUrl/manage-landslide-points'));
 
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = json.decode(response.body);
-      return jsonResponse
-          .map((data) => ManageLandslidePoint.fromJson(data))
-          .toList();
+      return jsonResponse.map((data) => ManageLandslidePoint.fromJson(data)).toList();
     } else {
       throw Exception('Không thể tải danh sách điểm trượt lở để quản lý');
     }
   }
 
   Future<List<String>> getAllDistricts() async {
-    final response = await http.get(Uri.parse('$baseUrl/districts'));
+    final response = await http.get(Uri.parse('$_baseUrl/districts'));
 
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = json.decode(response.body);
@@ -90,7 +125,7 @@ class LandslideDatabase {
   }
 
   Future<Map<String, int>> getForecastCounts() async {
-    final url = '${apiConfig.getApiUrl()}/forecast-record-points';
+    final url = '$_baseUrl/forecast-record-points';
     final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body) as List;
@@ -124,7 +159,7 @@ class LandslideDatabase {
       }
       return counts;
     } else {
-      throw Exception('Failed to load forecast data');
+      throw Exception('Không thể tải dữ liệu dự báo');
     }
   }
 }

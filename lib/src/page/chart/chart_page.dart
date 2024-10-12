@@ -2,20 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:truotlo/src/data/chart/chart_data.dart';
 import 'package:truotlo/src/data/chart/landslide_data.dart';
+import 'package:truotlo/src/database/landslide.dart';
 import 'package:truotlo/src/page/chart/elements/chart_menu.dart';
 import 'package:truotlo/src/user/auth_service.dart';
-import 'elements/chart_data_processor.dart';
-import 'elements/chart_utils.dart';
+import 'package:truotlo/src/page/chart/elements/chart_data_processor.dart';
+import 'package:truotlo/src/page/chart/elements/chart_utils.dart';
+import 'package:intl/intl.dart';
 
 class ChartPage extends StatefulWidget {
-  const ChartPage({super.key});
+  const ChartPage({Key? key}) : super(key: key);
 
   @override
   ChartPageState createState() => ChartPageState();
 }
 
 class ChartPageState extends State<ChartPage> {
-  final LandslideDataService _dataService = LandslideDataService();
+  final LandslideDatabase _dataService = LandslideDatabase();
   final ChartDataProcessor _dataProcessor = ChartDataProcessor();
   List<LandslideDataModel> _allData = [];
   List<LandslideDataModel> _filteredData = [];
@@ -60,14 +62,23 @@ class ChartPageState extends State<ChartPage> {
     });
 
     try {
-      final data = await _dataService.fetchLandslideData();
+      final data = await _dataService.fetchLandslideData(
+        startDate: _startDateTime,
+        endDate: _endDateTime,
+      );
+      if (data.isEmpty) {
+        setState(() {
+          _error = 'Không có dữ liệu trong khoảng thời gian đã chọn';
+          _isLoading = false;
+        });
+        return;
+      }
       setState(() {
         _allData = data;
         _filterDataBasedOnUserRole();
         _processData();
         ChartUtils.initLineVisibility(_lineVisibility, _filteredData.length);
-        _selectedChart =
-            _chartDataList.isNotEmpty ? _chartDataList[0].name : '';
+        _selectedChart = _chartDataList.isNotEmpty ? _chartDataList[0].name : '';
         _isLoading = false;
       });
     } catch (e) {
@@ -110,32 +121,20 @@ class ChartPageState extends State<ChartPage> {
 
         if (endTime != null) {
           setState(() {
-            _startDateTime =
-                ChartUtils.combineDateAndTime(dateRange.start, startTime);
-            _endDateTime =
-                ChartUtils.combineDateAndTime(dateRange.end, endTime);
-            _filterDataByDateRange();
+            _startDateTime = ChartUtils.combineDateAndTime(dateRange.start, startTime);
+            _endDateTime = ChartUtils.combineDateAndTime(dateRange.end, endTime);
           });
+          await _fetchData(); // Tải lại dữ liệu sau khi chọn khoảng thời gian
         }
       }
     }
-  }
-
-  void _filterDataByDateRange() {
-    _filteredData = ChartUtils.filterDataByDateRange(
-        _allData, _startDateTime, _endDateTime);
-    _processData();
-    ChartUtils.initLineVisibility(_lineVisibility, _filteredData.length);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Biểu đồ',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Biểu đồ', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.blue,
       ),
@@ -163,7 +162,18 @@ class ChartPageState extends State<ChartPage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error.isNotEmpty) {
-      return Center(child: Text(_error));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(_error, textAlign: TextAlign.center),
+            ElevatedButton(
+              onPressed: _fetchData,
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      );
     }
     return RefreshIndicator(
       onRefresh: _fetchData,
@@ -178,10 +188,7 @@ class ChartPageState extends State<ChartPage> {
                 children: [
                   Text(
                     _selectedChart,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 20),
                   if (_isAdmin)
@@ -191,20 +198,12 @@ class ChartPageState extends State<ChartPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          elevation: 5,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         child: Text(
-                          ChartUtils.getDateRangeText(
-                              _startDateTime, _endDateTime),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          ChartUtils.getDateRangeText(_startDateTime, _endDateTime),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -212,11 +211,7 @@ class ChartPageState extends State<ChartPage> {
                     Center(
                       child: Text(
                         'Dữ liệu của 2 ngày gần nhất',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[600]),
                       ),
                     ),
                 ],
@@ -230,6 +225,9 @@ class ChartPageState extends State<ChartPage> {
   }
 
   Widget _buildChartContent() {
+    if (_chartDataList.isEmpty) {
+      return const Center(child: Text('Không có dữ liệu để hiển thị'));
+    }
     if (_selectedChart == 'Đo nghiêng') {
       return Column(
         children: [
@@ -244,12 +242,10 @@ class ChartPageState extends State<ChartPage> {
   }
 
   Widget _buildSingleChart(String chartName) {
+    ChartData chartData = _chartDataList.firstWhere((chart) => chart.name == chartName);
     return Column(
       children: [
-        Text(
-          chartName,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        Text(chartName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         AspectRatio(
           aspectRatio: 1.5,
@@ -265,10 +261,7 @@ class ChartPageState extends State<ChartPage> {
         ),
         if (_showLegend) ...[
           const SizedBox(height: 20),
-          const Text(
-            'Chú thích:',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const Text('Chú thích:', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           SizedBox(
             height: 200,
