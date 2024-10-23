@@ -9,7 +9,7 @@ import 'package:truotlo/src/data/manage/landslide_point.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 
 class LandslideDatabase {
-  static const String _baseUrl = 'https://truotlobinhdinh.girc.edu.vn/api';
+  static const String _baseUrl = 'http://truotlobinhdinh.girc.edu.vn/api';
 
   Future<List<LandslideDataModel>> fetchLandslideData({
     DateTime? startDate,

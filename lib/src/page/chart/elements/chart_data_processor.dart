@@ -1,8 +1,11 @@
+// lib/src/page/chart/elements/chart_data_processor.dart
+
 import 'package:truotlo/src/data/chart/chart_data.dart';
 import 'package:truotlo/src/data/chart/landslide_data.dart';
+import 'package:truotlo/src/data/chart/rainfall_data.dart';
 
 class ChartDataProcessor {
-  List<ChartData> processData(List<LandslideDataModel> filteredData) {
+  List<ChartData> processData(List<LandslideDataModel> filteredData, List<RainfallData>? rainfallData) {
     // Sort the filtered data by date in ascending order
     filteredData.sort((a, b) => DateTime.parse(a.createdAt).compareTo(DateTime.parse(b.createdAt)));
 
@@ -34,7 +37,7 @@ class ChartDataProcessor {
       dates.add(DateTime.parse(item.createdAt));
     }
 
-    return [
+    List<ChartData> chartDataList = [
       ChartData(
         name: 'Đo nghiêng, hướng Tây - Đông',
         dataPoints: eastWestData,
@@ -71,5 +74,35 @@ class ChartDataProcessor {
         dates: dates,
       ),
     ];
+
+    // Add rainfall data if available
+    if (rainfallData != null && rainfallData.isNotEmpty) {
+      List<double> rainfallAmounts = [];
+      List<double> cumulativeRainfall = [];
+      List<DateTime> rainfallDates = [];
+      
+      double cumulative = 0.0;
+      for (var item in rainfallData) {
+        rainfallAmounts.add(item.rainfallAmount);
+        cumulative += item.rainfallAmount;
+        cumulativeRainfall.add(cumulative);
+        rainfallDates.add(item.measurementTime);
+      }
+
+      chartDataList.addAll([
+        ChartData(
+          name: 'Lượng mưa',
+          dataPoints: [rainfallAmounts],
+          dates: rainfallDates,
+        ),
+        ChartData(
+          name: 'Lượng mưa tích lũy',
+          dataPoints: [cumulativeRainfall],
+          dates: rainfallDates,
+        ),
+      ]);
+    }
+
+    return chartDataList;
   }
 }

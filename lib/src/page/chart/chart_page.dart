@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:truotlo/src/data/chart/chart_data.dart';
 import 'package:truotlo/src/data/chart/landslide_data.dart';
+import 'package:truotlo/src/data/chart/rainfall_data.dart';
 import 'package:truotlo/src/database/landslide.dart';
 import 'package:truotlo/src/page/chart/elements/chart_menu.dart';
 import 'package:truotlo/src/user/auth_service.dart';
@@ -19,9 +20,14 @@ class ChartPage extends StatefulWidget {
 class ChartPageState extends State<ChartPage> {
   final LandslideDatabase _dataService = LandslideDatabase();
   final ChartDataProcessor _dataProcessor = ChartDataProcessor();
+  
+  // Data states
   List<LandslideDataModel> _allData = [];
   List<LandslideDataModel> _filteredData = [];
+  List<RainfallData> _rainfallData = [];
   List<ChartData> _chartDataList = [];
+  
+  // UI states
   bool _isLoading = true;
   String _error = '';
   String _selectedChart = '';
@@ -29,6 +35,8 @@ class ChartPageState extends State<ChartPage> {
   DateTime? _startDateTime;
   DateTime? _endDateTime;
   final Map<int, bool> _lineVisibility = {};
+  
+  // User states
   String? _userRole;
   bool _isAdmin = false;
 
@@ -62,19 +70,29 @@ class ChartPageState extends State<ChartPage> {
     });
 
     try {
-      final data = await _dataService.fetchLandslideData(
+      // Fetch both landslide and rainfall data
+      final Future<List<LandslideDataModel>> landslideFuture = _dataService.fetchLandslideData(
         startDate: _startDateTime,
         endDate: _endDateTime,
       );
-      if (data.isEmpty) {
+      final Future<List<RainfallData>> rainfallFuture = RainfallDataService.fetchRainfallData();
+
+      // Wait for both futures to complete
+      final results = await Future.wait([landslideFuture, rainfallFuture]);
+      final landslideData = results[0] as List<LandslideDataModel>;
+      final rainfallData = results[1] as List<RainfallData>;
+
+      if (landslideData.isEmpty) {
         setState(() {
           _error = 'Không có dữ liệu trong khoảng thời gian đã chọn';
           _isLoading = false;
         });
         return;
       }
+
       setState(() {
-        _allData = data;
+        _allData = landslideData;
+        _rainfallData = rainfallData;
         _filterDataBasedOnUserRole();
         _processData();
         ChartUtils.initLineVisibility(_lineVisibility, _filteredData.length);
@@ -91,10 +109,19 @@ class ChartPageState extends State<ChartPage> {
 
   void _filterDataBasedOnUserRole() {
     _filteredData = ChartUtils.filterDataBasedOnUserRole(_allData, _isAdmin);
+    _rainfallData = ChartUtils.filterRainfallDataBasedOnUserRole(_rainfallData, _isAdmin);
+    
+    if (_startDateTime != null && _endDateTime != null) {
+      _rainfallData = ChartUtils.filterRainfallDataByDateRange(
+        _rainfallData,
+        _startDateTime,
+        _endDateTime,
+      );
+    }
   }
 
   void _processData() {
-    _chartDataList = _dataProcessor.processData(_filteredData);
+    _chartDataList = _dataProcessor.processData(_filteredData, _rainfallData);
   }
 
   Future<void> _selectDateTimeRange() async {
@@ -124,7 +151,7 @@ class ChartPageState extends State<ChartPage> {
             _startDateTime = ChartUtils.combineDateAndTime(dateRange.start, startTime);
             _endDateTime = ChartUtils.combineDateAndTime(dateRange.end, endTime);
           });
-          await _fetchData(); // Tải lại dữ liệu sau khi chọn khoảng thời gian
+          await _fetchData();
         }
       }
     }
@@ -139,7 +166,7 @@ class ChartPageState extends State<ChartPage> {
         backgroundColor: Colors.blue,
       ),
       endDrawer: ChartMenu(
-        chartNames: [..._chartDataList.map((c) => c.name), 'Đo nghiêng'],
+        chartNames: [..._chartDataList.map((c) => c.name)],
         selectedChart: _selectedChart,
         showLegend: _showLegend,
         onChartTypeChanged: (value) {
@@ -248,7 +275,7 @@ class ChartPageState extends State<ChartPage> {
         Text(chartName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         AspectRatio(
-          aspectRatio: 1.5,
+          aspectRatio: chartName == 'Lượng mưa' ? 2.0 : 1.5, // Wider aspect ratio for rainfall chart
           child: LineChart(
             ChartUtils.getLineChartData(
               chartName,
