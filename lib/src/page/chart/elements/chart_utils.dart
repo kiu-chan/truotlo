@@ -13,29 +13,11 @@ class ChartUtils {
     for (int i = 0; i < dataLength; i++) {
       lineVisibility[i] = true;
     }
-    lineVisibility[-1] = true; // Cho đường giá trị mặc định
+    lineVisibility[-1] = true;
   }
 
   static DateTime combineDateAndTime(DateTime date, TimeOfDay time) {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
-  }
-
-  static List<LandslideDataModel> filterDataByDateRange(
-    List<LandslideDataModel> allData,
-    DateTime? startDateTime,
-    DateTime? endDateTime
-  ) {
-    if (startDateTime != null && endDateTime != null) {
-      return allData.where((d) {
-        final dataDate = DateTime.parse(d.createdAt);
-        final adjustedStartDateTime = startDateTime.add(const Duration(hours: 7));
-        final adjustedEndDateTime = endDateTime.add(const Duration(hours: 7));
-        return dataDate.isAfter(adjustedStartDateTime) &&
-               dataDate.isBefore(adjustedEndDateTime.add(const Duration(days: 1)));
-      }).toList();
-    } else {
-      return List.from(allData);
-    }
   }
 
   static String getDateRangeText(DateTime? startDateTime, DateTime? endDateTime) {
@@ -46,21 +28,40 @@ class ChartUtils {
     }
   }
 
-  static List<RainfallData> filterRainfallDataByDateRange(
-    List<RainfallData> allData,
-    DateTime? startDateTime,
-    DateTime? endDateTime
-  ) {
-    if (startDateTime != null && endDateTime != null) {
-      return allData.where((d) {
-        final adjustedStartDateTime = startDateTime.add(const Duration(hours: 7));
-        final adjustedEndDateTime = endDateTime.add(const Duration(hours: 7));
-        return d.measurementTime.isAfter(adjustedStartDateTime) &&
-               d.measurementTime.isBefore(adjustedEndDateTime.add(const Duration(days: 1)));
-      }).toList();
+  static (double, List<double>) calculateRainfallYAxisRange(List<double> values) {
+    if (values.isEmpty) return (5, [0, 1, 2, 3, 4, 5]);
+    
+    double maxValue = values.reduce((max, value) => max > value ? max : value);
+    
+    // Làm tròn maxValue lên 
+    double roundedMax;
+    if (maxValue <= 5) {
+      roundedMax = 5;
+    } else if (maxValue <= 10) {
+      roundedMax = 10;
     } else {
-      return List.from(allData);
+      roundedMax = (maxValue / 5).ceil() * 5;
     }
+    
+    // Tạo 5 giá trị đều nhau
+    List<double> intervals = List.generate(6, (index) => 
+      (roundedMax / 5 * index).roundToDouble()
+    );
+    
+    return (roundedMax, intervals);
+  }
+
+  static List<int> calculateXAxisLabels(int dataLength) {
+    if (dataLength <= 5) {
+      return List.generate(dataLength, (index) => index);
+    }
+
+    List<int> indices = [];
+    double interval = (dataLength - 1) / 4;
+    for (int i = 0; i < 5; i++) {
+      indices.add((i * interval).round());
+    }
+    return indices;
   }
 
   static LineChartData getLineChartData(
@@ -70,53 +71,208 @@ class ChartUtils {
     List<LandslideDataModel> filteredData,
     bool isAdmin,
   ) {
+    ChartData chartData = chartDataList.firstWhere((c) => c.name == selectedChart);
+    bool isRainfallChart = selectedChart.contains('Lượng mưa');
+
+    late double maxY;
+    late List<double> yAxisValues;
+    late List<int> xAxisIndices;
+
+    if (isRainfallChart) {
+      final result = calculateRainfallYAxisRange(chartData.dataPoints[0]);
+      maxY = result.$1;
+      yAxisValues = result.$2;
+      xAxisIndices = calculateXAxisLabels(chartData.dates.length);
+    }
+
     return LineChartData(
       lineBarsData: _getLineBarsData(selectedChart, chartDataList, lineVisibility, isAdmin),
-      titlesData: _getTitlesData(selectedChart, filteredData, chartDataList),
-      gridData: const FlGridData(show: true),
-      borderData: FlBorderData(show: true),
+      minY: isRainfallChart ? 0 : null,
+      maxY: isRainfallChart ? maxY : null,
+      titlesData: FlTitlesData(
+        show: true,
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 60,
+            interval: 1,
+            getTitlesWidget: (value, meta) {
+              int index = value.toInt();
+              if (isRainfallChart) {
+                if (xAxisIndices.contains(index)) {
+                  return Transform.rotate(
+                    angle: -45 * 3.14 / 180,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Text(
+                        DateFormat('dd/MM\nHH:mm').format(chartData.dates[index]),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              } else if (selectedChart.startsWith('Đo nghiêng')) {
+                List<double> fixedValues = [-0.5, -0.3, -0.1, 0, 0.1];
+                int idx = fixedValues.indexWhere((v) => (v - value).abs() < 0.001);
+                if (idx != -1) {
+                  return Transform.rotate(
+                    angle: -45 * 3.14 / 180,
+                    child: Text(
+                      fixedValues[idx].toStringAsFixed(1),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                  );
+                }
+              } else {
+                if (index >= 0 && index < chartData.dates.length && index % (chartData.dates.length ~/ 4) == 0) {
+                  return Transform.rotate(
+                    angle: -45 * 3.14 / 180,
+                    child: Text(
+                      DateFormat('dd/MM\nHH:mm').format(chartData.dates[index]),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                  );
+                }
+              }
+              return const SizedBox();
+            },
+          ),
+        ),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            interval: 1,
+            reservedSize: 50,
+            getTitlesWidget: (value, meta) {
+              if (isRainfallChart) {
+                if (yAxisValues.contains(value)) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Text(
+                      '${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)} mm',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                }
+              } else if (selectedChart.startsWith('Đo nghiêng')) {
+                List<double> depthValues = [-16, -11, -6];
+                if (depthValues.contains(value)) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Text(
+                      value.toStringAsFixed(0),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                }
+              } else {
+                double minY = chartData.dataPoints[0].reduce((min, value) => min < value ? min : value);
+                double maxY = chartData.dataPoints[0].reduce((max, value) => max > value ? max : value);
+                double range = maxY - minY;
+                List<double> yValues = List.generate(5, (index) => minY + (range / 4) * index);
+                
+                if (yValues.any((y) => (y - value).abs() < 0.001)) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Text(
+                      value.toStringAsFixed(2),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                }
+              }
+              return const SizedBox();
+            },
+          ),
+        ),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      gridData: FlGridData(
+        show: true,
+        getDrawingHorizontalLine: (value) {
+          if (isRainfallChart && !yAxisValues.contains(value)) {
+            return const FlLine(color: Colors.transparent);
+          }
+          return FlLine(
+            color: Colors.grey.shade200,
+            strokeWidth: 1,
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          int index = value.toInt();
+          if (isRainfallChart) {
+            if (xAxisIndices.contains(index)) {
+              return FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 1,
+              );
+            }
+            return const FlLine(color: Colors.transparent);
+          }
+          return FlLine(
+            color: Colors.grey.shade200,
+            strokeWidth: 1,
+          );
+        },
+      ),
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
             return touchedBarSpots.map((barSpot) {
-              final flSpot = barSpot;
-              if (flSpot.x == -1 || flSpot.y == -1) {
-                return null;
-              }
+              if (barSpot.x < 0 || barSpot.y < 0) return null;
 
-              ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
               String tooltipText;
-              
-              if (selectedChart == 'Lượng mưa tích lũy') {
-                String date = DateFormat('dd/MM/yyyy HH:mm').format(selectedChartData.dates[flSpot.x.toInt()]).toLowerCase();
-                tooltipText = '$date: ${flSpot.y.toStringAsFixed(1)} mm';
-              } else if (selectedChart == 'Lượng mưa') {
-                String date = DateFormat('dd/MM/yyyy HH:mm').format(selectedChartData.dates[flSpot.x.toInt()]).toLowerCase();
-                tooltipText = '$date: ${flSpot.y.toStringAsFixed(2)} mm';
-              } else if (selectedChart.startsWith('Đo nghiêng')) {
-                int dateIndex = barSpot.barIndex;
-                if (dateIndex >= 0 && dateIndex < selectedChartData.dates.length) {
-                  String date = DateFormat('dd/MM/yyyy HH:mm').format(selectedChartData.dates[dateIndex]).toLowerCase();
-                  tooltipText = '$date: ${flSpot.x.toStringAsFixed(3)}';
+              int index = barSpot.x.toInt();
+              if (index >= 0 && index < chartData.dates.length) {
+                String date = DateFormat('dd/MM/yyyy HH:mm').format(chartData.dates[index]);
+                if (isRainfallChart) {
+                  tooltipText = '$date\n${barSpot.y.toStringAsFixed(1)} mm';
                 } else {
-                  tooltipText = 'giá trị: ${flSpot.x.toStringAsFixed(3)}';
+                  tooltipText = '$date\n${barSpot.y.toStringAsFixed(2)}';
                 }
               } else {
-                String date = DateFormat('dd/MM/yyyy HH:mm').format(selectedChartData.dates[flSpot.x.toInt()]).toLowerCase();
-                tooltipText = '$date: ${flSpot.y.toStringAsFixed(2)}';
+                tooltipText = barSpot.y.toStringAsFixed(2);
               }
 
               return LineTooltipItem(
                 tooltipText,
-                const TextStyle(color: Colors.white, fontSize: 12),
+                const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               );
             }).toList();
           },
+          // tooltipBgColor: Colors.black.withOpacity(0.8),
+          tooltipRoundedRadius: 8,
           tooltipPadding: const EdgeInsets.all(8),
           fitInsideHorizontally: true,
           fitInsideVertically: true,
         ),
         handleBuiltInTouches: true,
+        touchSpotThreshold: 20,
       ),
     );
   }
@@ -127,71 +283,50 @@ class ChartUtils {
     Map<int, bool> lineVisibility,
     bool isAdmin,
   ) {
-    ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
+    ChartData chartData = chartDataList.firstWhere((c) => c.name == selectedChart);
     List<LineChartBarData> lineBars = [];
 
-    if (selectedChart == 'Lượng mưa tích lũy') {
-      if (lineVisibility[0] ?? false) {
-        lineBars.add(
-          LineChartBarData(
-            spots: List.generate(selectedChartData.dataPoints[0].length, (index) {
-              return FlSpot(index.toDouble(), selectedChartData.dataPoints[0][index]);
-            }),
-            isCurved: true,
-            color: Colors.green,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: Colors.green.withOpacity(0.1),
-            ),
+    if (selectedChart.contains('Lượng mưa') && (lineVisibility[0] ?? false)) {
+      bool isCumulative = selectedChart == 'Lượng mưa tích lũy';
+      List<FlSpot> spots = List.generate(
+        chartData.dataPoints[0].length,
+        (index) => FlSpot(index.toDouble(), chartData.dataPoints[0][index]),
+      );
+
+      lineBars.add(
+        LineChartBarData(
+          spots: spots,
+          isCurved: isCumulative,
+          color: isCumulative ? Colors.green : Colors.blue,
+          barWidth: isCumulative ? 2 : 3,
+          dotData: FlDotData(
+            show: isCumulative,
+            getDotPainter: (spot, percent, bar, index) {
+              return FlDotCirclePainter(
+                radius: 3,
+                color: isCumulative ? Colors.green : Colors.blue,
+                strokeWidth: 1,
+                strokeColor: Colors.white,
+              );
+            },
           ),
-        );
-      }
-    } else if (selectedChart == 'Lượng mưa') {
-      if (lineVisibility[0] ?? false) {
-        lineBars.add(
-          LineChartBarData(
-            spots: List.generate(selectedChartData.dataPoints[0].length, (index) {
-              return FlSpot(index.toDouble(), selectedChartData.dataPoints[0][index]);
-            }),
-            isCurved: false,
-            color: Colors.blue,
-            barWidth: 5,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: Colors.blue.withOpacity(0.3),
-            ),
+          belowBarData: BarAreaData(
+            show: true,
+            color: (isCumulative ? Colors.green : Colors.blue).withOpacity(0.15),
           ),
-        );
-      }
-    } else if (['Piezometer 1', 'Piezometer 2', 'Crackmeter 1', 'Crackmeter 2', 'Crackmeter 3'].contains(selectedChart)) {
-      if (lineVisibility[0] ?? false) {
-lineBars.add(
-          LineChartBarData(
-            spots: List.generate(selectedChartData.dataPoints[0].length, (index) {
-              return FlSpot(index.toDouble(), selectedChartData.dataPoints[0][index]);
-            }),
-            isCurved: true,
-            curveSmoothness: 0.35,
-            color: Colors.blue,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: false),
-          ),
-        );
-      }
+        ),
+      );
     } else if (selectedChart.startsWith('Đo nghiêng')) {
-      for (int i = 0; i < selectedChartData.dataPoints.length; i++) {
+      for (int i = 0; i < chartData.dataPoints.length; i++) {
         if (lineVisibility[i] ?? false) {
           lineBars.add(
             LineChartBarData(
               spots: [
-                FlSpot(selectedChartData.dataPoints[i][0], -6),
-                FlSpot(selectedChartData.dataPoints[i][1], -11),
-                FlSpot(selectedChartData.dataPoints[i][2], -16),
+                FlSpot(chartData.dataPoints[i][0], -6),
+                FlSpot(chartData.dataPoints[i][1], -11),
+                FlSpot(chartData.dataPoints[i][2], -16),
               ],
               isCurved: true,
-              curveSmoothness: 0.35,
               color: Colors.primaries[i % Colors.primaries.length],
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(show: false),
@@ -210,7 +345,6 @@ lineBars.add(
                 FlSpot(0.000935, -16),
               ],
               isCurved: true,
-              curveSmoothness: 0.35,
               color: Colors.black,
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(show: false),
@@ -226,7 +360,6 @@ lineBars.add(
                 FlSpot(-0.032529, -16),
               ],
               isCurved: true,
-              curveSmoothness: 0.35,
               color: Colors.black,
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(show: false),
@@ -235,103 +368,22 @@ lineBars.add(
           );
         }
       }
+    } else if (lineVisibility[0] ?? false) {
+      lineBars.add(
+        LineChartBarData(
+          spots: List.generate(
+            chartData.dataPoints[0].length,
+            (index) => FlSpot(index.toDouble(), chartData.dataPoints[0][index]),
+          ),
+isCurved: true,
+          color: Colors.blue,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(show: false),
+        ),
+      );
     }
 
     return lineBars;
-  }
-
-  static FlTitlesData _getTitlesData(
-    String selectedChart,
-    List<LandslideDataModel> filteredData,
-    List<ChartData> chartDataList
-  ) {
-    return FlTitlesData(
-      bottomTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          reservedSize: 60,
-          getTitlesWidget: (value, meta) {
-            if (selectedChart == 'Lượng mưa tích lũy' || selectedChart == 'Lượng mưa') {
-              ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
-              int dataLength = selectedChartData.dates.length;
-              List<int> indicesToShow = [0, dataLength ~/ 4, dataLength ~/ 2, (3 * dataLength) ~/ 4, dataLength - 1];
-              
-              int index = value.toInt();
-              if (indicesToShow.contains(index)) {
-                return Transform.rotate(
-                  angle: -45 * 3.14 / 180,
-                  child: Text(
-                    DateFormat('dd/MM HH:mm').format(selectedChartData.dates[index]).toLowerCase(),
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                );
-              }
-            } else if (selectedChart.startsWith('Đo nghiêng')) {
-              List<double> fixedValues = [-0.5, -0.3, -0.1, 0, 0.1];
-              int index = fixedValues.indexWhere((v) => (v - value).abs() < 0.001);
-              if (index != -1) {
-                return Transform.rotate(
-                  angle: -45 * 3.14 / 180,
-                  child: Text(
-                    fixedValues[index].toStringAsFixed(1).toLowerCase(),
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                );
-              }
-            } else {
-              ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
-              int dataLength = selectedChartData.dates.length;
-              List<int> indicesToShow = [0, dataLength ~/ 4, dataLength ~/ 2, (3 * dataLength) ~/ 4, dataLength - 1];
-              
-              int index = value.toInt();
-              if (indicesToShow.contains(index)) {
-                return Transform.rotate(
-                  angle: -45 * 3.14 / 180,
-                  child: Text(
-                    DateFormat('dd/MM HH:mm').format(selectedChartData.dates[index]).toLowerCase(),
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                );
-              }
-            }
-            return const Text('');
-          },
-          interval: 1,
-        ),
-      ),
-      leftTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          reservedSize: 40,
-          getTitlesWidget: (value, meta) {
-            if (selectedChart == 'Lượng mưa tích lũy' || selectedChart == 'Lượng mưa') {
-              if (value % 5 == 0) {
-                return Text('${value.toInt()} mm');
-              }
-            } else if (selectedChart.startsWith('Đo nghiêng')) {
-              List<double> depthValues = [-16, -11, -6];
-              if (depthValues.contains(value)) {
-                return Text(value.toStringAsFixed(0));
-              }
-            } else {
-              ChartData selectedChartData = chartDataList.firstWhere((c) => c.name == selectedChart);
-              double minY = selectedChartData.dataPoints[0].reduce((a, b) => a < b ? a : b);
-              double maxY = selectedChartData.dataPoints[0].reduce((a, b) => a > b ? a : b);
-              double range = maxY - minY;
-              List<double> yValues = List.generate(5, (index) => minY + (range / 4) * index);
-              
-              if (yValues.any((y) => (y - value).abs() < 0.001)) {
-                return Text(value.toStringAsFixed(2));
-              }
-            }
-            return const Text('');
-          },
-          interval: 1,
-        ),
-      ),
-      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-    );
   }
 
   static List<Widget> buildLegendItems(
@@ -361,14 +413,26 @@ lineBars.add(
           toggleLineVisibility,
         )
       ];
-    } else if (['Piezometer 1', 'Piezometer 2', 'Crackmeter 1', 'Crackmeter 2', 'Crackmeter 3'].contains(selectedChart)) {
-      return [_buildLegendItem(Colors.blue, selectedChart.toLowerCase(), 0, lineVisibility, toggleLineVisibility)];
-    } else {
-      var legendItems = lineVisibility.entries.where((entry) => entry.key != -1).map((entry) {
+    } else if (['Piezometer 1', 'Piezometer 2', 'Crackmeter 1', 'Crackmeter 2', 'Crackmeter 3']
+        .contains(selectedChart)) {
+      return [
+        _buildLegendItem(
+          Colors.blue,
+          selectedChart.toLowerCase(),
+          0,
+          lineVisibility,
+          toggleLineVisibility,
+        )
+      ];
+    } else if (selectedChart.startsWith('Đo nghiêng')) {
+      var legendItems = lineVisibility.entries
+          .where((entry) => entry.key != -1)
+          .map((entry) {
+        final index = entry.key;
         return _buildLegendItem(
-          Colors.primaries[entry.key % Colors.primaries.length],
-          DateFormat('dd/MM/yyyy HH:mm').format(chartDataList[0].dates[entry.key]).toLowerCase(),
-          entry.key,
+          Colors.primaries[index % Colors.primaries.length],
+          DateFormat('dd/MM/yyyy HH:mm').format(chartDataList[0].dates[index]),
+          index,
           lineVisibility,
           toggleLineVisibility,
         );
@@ -388,6 +452,8 @@ lineBars.add(
 
       return legendItems;
     }
+
+    return [];
   }
 
   static Widget _buildLegendItem(
@@ -397,6 +463,9 @@ lineBars.add(
     Map<int, bool> lineVisibility,
     Function(int) toggleLineVisibility,
   ) {
+    final bool isVisible = lineVisibility[index] ?? true;
+    final bool isRainfallChart = label.contains('lượng mưa');
+
     return GestureDetector(
       onTap: () => toggleLineVisibility(index),
       child: Padding(
@@ -407,16 +476,26 @@ lineBars.add(
               width: 20,
               height: 20,
               decoration: BoxDecoration(
-                color: lineVisibility[index] ?? true ? color : Colors.grey,
-                borderRadius: label.contains('lượng mưa') ? BorderRadius.circular(0) : null,
+                color: isVisible ? color : Colors.grey.shade300,
+                borderRadius: isRainfallChart 
+                    ? BorderRadius.zero 
+                    : BorderRadius.circular(4),
+                border: Border.all(
+                  color: Colors.grey.shade400,
+                  width: 1,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: lineVisibility[index] ?? true ? Colors.black : Colors.grey,
-                decoration: lineVisibility[index] ?? true ? TextDecoration.none : TextDecoration.lineThrough,
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isVisible ? Colors.black87 : Colors.grey,
+                  decoration: isVisible ? null : TextDecoration.lineThrough,
+                  fontSize: 12,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -425,7 +504,10 @@ lineBars.add(
     );
   }
 
-  static List<LandslideDataModel> filterDataBasedOnUserRole(List<LandslideDataModel> allData, bool isAdmin) {
+  static List<LandslideDataModel> filterDataBasedOnUserRole(
+    List<LandslideDataModel> allData,
+    bool isAdmin,
+  ) {
     if (isAdmin) {
       return List.from(allData);
     } else {
@@ -439,41 +521,109 @@ lineBars.add(
 
   static List<RainfallData> filterRainfallDataBasedOnUserRole(
     List<RainfallData> allData,
-    bool isAdmin
+    bool isAdmin,
   ) {
     if (isAdmin) {
       return List.from(allData);
     } else {
       final twoDaysAgo = DateTime.now().subtract(const Duration(days: 2));
-      return allData.where((item) => item.measurementTime.isAfter(twoDaysAgo)).toList();
+      return allData
+          .where((item) => item.measurementTime.isAfter(twoDaysAgo))
+          .toList();
     }
   }
 
-  static (double, double) getRainfallYAxisRange(List<RainfallData> rainfallData) {
-    if (rainfallData.isEmpty) return (0, 5);
-    
-    double maxValue = rainfallData
-        .map((data) => data.rainfallAmount)
-        .reduce((max, value) => max > value ? max : value);
-    
-    return (0, (maxValue + 1).ceilToDouble());
+  static List<RainfallData> filterRainfallDataByDateRange(
+    List<RainfallData> allData,
+    DateTime? startDateTime,
+    DateTime? endDateTime,
+  ) {
+    if (startDateTime != null && endDateTime != null) {
+      return allData
+          .where((d) => d.measurementTime.isAfter(startDateTime) &&
+              d.measurementTime.isBefore(endDateTime.add(const Duration(days: 1))))
+          .toList();
+    }
+    return List.from(allData);
   }
 
-  static (double, double) getCumulativeRainfallYAxisRange(List<RainfallData> rainfallData) {
-    if (rainfallData.isEmpty) return (0, 10);
-    
-    double totalRainfall = rainfallData
-        .map((data) => data.rainfallAmount)
-        .reduce((sum, value) => sum + value);
-    
-    // Round up to the nearest 5 or 10 for better readability
-    double maxValue = totalRainfall;
-    if (maxValue <= 50) {
-      maxValue = (maxValue / 5).ceil() * 5.0;
+  static double getRainfallBarWidth(int dataLength) {
+    if (dataLength <= 24) {
+      return 8.0;
+    } else if (dataLength <= 48) {
+      return 6.0;
+    } else if (dataLength <= 72) {
+      return 4.0;
     } else {
-      maxValue = (maxValue / 10).ceil() * 10.0;
+      return 3.0;
     }
+  }
+
+  static Color getRainfallBarColor(double amount) {
+    if (amount == 0) return Colors.grey.shade300;
     
-    return (0, maxValue);
+    if (amount < 2.5) {
+      return Colors.blue.shade300;
+    } else if (amount < 7.5) {
+      return Colors.blue.shade500;
+    } else {
+      return Colors.blue.shade700;
+    }
+  }
+
+  static FlGridData getRainfallGridData(List<double> yAxisValues, List<int> xAxisIndices) {
+    return FlGridData(
+      show: true,
+      getDrawingHorizontalLine: (value) {
+        if (!yAxisValues.contains(value)) {
+          return const FlLine(color: Colors.transparent);
+        }
+        return FlLine(
+          color: Colors.grey.shade200,
+          strokeWidth: 1,
+        );
+      },
+      getDrawingVerticalLine: (value) {
+        if (!xAxisIndices.contains(value.toInt())) {
+          return const FlLine(color: Colors.transparent);
+        }
+        return FlLine(
+          color: Colors.grey.shade200,
+          strokeWidth: 1,
+        );
+      },
+    );
+  }
+
+  static FlBorderData getChartBorderData() {
+    return FlBorderData(
+      show: true,
+      border: Border.all(color: Colors.grey.shade300),
+    );
+  }
+
+  static String formatRainfallAmount(double amount) {
+    if (amount == amount.roundToDouble()) {
+      return amount.toStringAsFixed(0);
+    }
+    return amount.toStringAsFixed(1);
+  }
+
+  static String formatDateTime(DateTime dateTime) {
+    return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+  }
+
+  static (DateTime, DateTime)? getDefaultDateRange() {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final endOfToday = startOfToday
+        .add(const Duration(days: 1))
+        .subtract(const Duration(seconds: 1));
+    return (startOfToday, endOfToday);
+  }
+
+  static bool isDateInRange(DateTime date, DateTime start, DateTime end) {
+    return date.isAfter(start) && 
+           date.isBefore(end.add(const Duration(days: 1)));
   }
 }
