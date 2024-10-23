@@ -60,92 +60,69 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
   }
 
   Widget _buildToggleButtons() {
-    return ToggleButtons(
-      isSelected: [_showHourlyForecast, !_showHourlyForecast],
-      onPressed: (int index) {
-        setState(() {
-          _showHourlyForecast = index == 0;
-          _updateTimestamp();
-        });
-      },
-      children: const [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Theo giờ', style: TextStyle(color: Colors.blue)),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Theo ngày', style: TextStyle(color: Colors.blue)),
-        ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ToggleButtons(
+        isSelected: [_showHourlyForecast, !_showHourlyForecast],
+        onPressed: (int index) {
+          setState(() {
+            _showHourlyForecast = index == 0;
+            _updateTimestamp();
+          });
+        },
+        children: const [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Theo giờ', style: TextStyle(color: Colors.blue)),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Theo ngày', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildHourlyForecastTable() {
-    return Table(
-      border: TableBorder.all(),
-      columnWidths: const {
-        0: FlexColumnWidth(0.5),
-        1: FlexColumnWidth(1),
-        2: FlexColumnWidth(1),
-        3: FlexColumnWidth(1),
-        4: FlexColumnWidth(1),
-        5: FlexColumnWidth(1),
-        6: FlexColumnWidth(1),
-      },
-      children: [
-        buildTableRow(
-            ['STT', 'Huyện', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'],
-            isHeader: true),
-        buildTableRow([
-          '1',
-          'An Lão',
-          'Đá Cạnh',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('very_high')
-        ]),
-        buildTableRow([
-          '2',
-          'An Lão8',
-          'Đá Cạnh8',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('high')
-        ]),
-        buildTableRow([
-          '3',
-          'An Lão9',
-          'Cống Chào9',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('medium')
-        ]),
-        buildTableRow([
-          '4',
-          'An Lão30',
-          'Đá Cạnh30',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('high')
-        ]),
-        buildTableRow([
-          '5',
-          'An Lão31',
-          'Đá Cạnh31',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('high')
-        ]),
-        buildTableRow([
-          '6',
-          'An Lão32',
-          'Đá Cạnh32',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('high')
-        ]),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.of(context).size.width - 32,
+        ),
+        child: Table(
+          border: TableBorder.all(),
+          defaultColumnWidth: const IntrinsicColumnWidth(),
+          children: [
+            buildTableRow(
+              ['Huyện', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'],
+              isHeader: true,
+            ),
+            buildTableRow([
+              'An Lão',
+              'Đá Cạnh',
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('very_high')
+            ]),
+            buildTableRow([
+              'An Lão8',
+              'Đá Cạnh8',
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('high')
+            ]),
+            buildTableRow([
+              'An Lão9',
+              'Cống Chào9',
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('medium')
+            ]),
+          ],
+        ),
+      ),
     );
   }
 
@@ -155,61 +132,51 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
     final dateHeaders = List.generate(
         5, (index) => dateFormat.format(today.add(Duration(days: index))));
 
-    return Table(
-      border: TableBorder.all(),
-      columnWidths: const {
-        0: FlexColumnWidth(0.5),
-        1: FlexColumnWidth(1.5),
-        2: FlexColumnWidth(1),
-        3: FlexColumnWidth(1),
-        4: FlexColumnWidth(1),
-        5: FlexColumnWidth(1),
-        6: FlexColumnWidth(1),
-      },
-      children: [
-        buildTableRow(['TT', 'Huyện', ...dateHeaders], isHeader: true),
-        buildTableRow([
-          '1',
-          'An Lão',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-        ]),
-        buildTableRow([
-          '2',
-          'An Lão1',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-        ]),
-        buildTableRow([
-          '3',
-          'An Lão12',
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-          buildRiskIcon('no_risk'),
-        ]),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.of(context).size.width - 32,
+        ),
+        child: Table(
+          border: TableBorder.all(),
+          defaultColumnWidth: const IntrinsicColumnWidth(),
+          children: [
+            buildTableRow(['Huyện', ...dateHeaders], isHeader: true),
+            buildTableRow([
+              'An Lão',
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+            ]),
+            buildTableRow([
+              'An Lão1',
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+              buildRiskIcon('no_risk'),
+            ]),
+          ],
+        ),
+      ),
     );
   }
 }
 
-// Helper functions
-
 TableRow buildTableRow(List<dynamic> cells, {bool isHeader = false}) {
   return TableRow(
+    decoration: BoxDecoration(
+      color: isHeader ? Colors.grey[200] : null,
+    ),
     children: cells
         .map((cell) => TableCell(
               child: Container(
                 padding: const EdgeInsets.all(8.0),
                 child: cell is Widget
-                    ? cell
+                    ? Center(child: cell)
                     : Text(
                         cell.toString(),
                         style: TextStyle(
@@ -260,7 +227,8 @@ Widget buildLegend(BuildContext context) {
           context, 'no_risk', 'KHÔNG CÓ', 'Hiếm khi xảy ra trượt lở'),
       _buildLegendItem(
           context, 'very_low', 'RẤT THẤP', 'Hiếm khi xảy ra trượt lở'),
-      _buildLegendItem(context, 'low', 'THẤP', 'Hiếm khi xảy ra trượt lở'),
+      _buildLegendItem(
+          context, 'low', 'THẤP', 'Hiếm khi xảy ra trượt lở'),
       _buildLegendItem(context, 'medium', 'TRUNG BÌNH',
           'Cảnh báo phát sinh trượt lở cục bộ, chủ yếu trượt lở có quy mô nhỏ. Chủ động cảnh giác đối với các khu vực nguy hiểm.'),
       _buildLegendItem(context, 'high', 'CAO',
