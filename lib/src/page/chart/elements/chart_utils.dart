@@ -386,75 +386,95 @@ isCurved: true,
     return lineBars;
   }
 
-  static List<Widget> buildLegendItems(
-    String selectedChart,
-    Map<int, bool> lineVisibility,
-    List<ChartData> chartDataList,
-    Function(int) toggleLineVisibility,
-    bool isAdmin,
-  ) {
-    if (selectedChart == 'Lượng mưa tích lũy') {
-      return [
-        _buildLegendItem(
-          Colors.green,
-          'lượng mưa tích lũy (mm)',
-          0,
-          lineVisibility,
-          toggleLineVisibility,
-        )
-      ];
-    } else if (selectedChart == 'Lượng mưa') {
-      return [
-        _buildLegendItem(
-          Colors.blue,
-          'lượng mưa (mm)',
-          0,
-          lineVisibility,
-          toggleLineVisibility,
-        )
-      ];
-    } else if (['Piezometer 1', 'Piezometer 2', 'Crackmeter 1', 'Crackmeter 2', 'Crackmeter 3']
-        .contains(selectedChart)) {
-      return [
-        _buildLegendItem(
-          Colors.blue,
-          selectedChart.toLowerCase(),
-          0,
-          lineVisibility,
-          toggleLineVisibility,
-        )
-      ];
-    } else if (selectedChart.startsWith('Đo nghiêng')) {
-      var legendItems = lineVisibility.entries
-          .where((entry) => entry.key != -1)
-          .map((entry) {
-        final index = entry.key;
-        return _buildLegendItem(
-          Colors.primaries[index % Colors.primaries.length],
-          DateFormat('dd/MM/yyyy HH:mm').format(chartDataList[0].dates[index]),
-          index,
-          lineVisibility,
-          toggleLineVisibility,
-        );
-      }).toList();
-
-      if (lineVisibility[-1] ?? false) {
-        legendItems.add(
-          _buildLegendItem(
-            Colors.black,
-            'bắt đầu(19/11/2023)',
-            -1,
-            lineVisibility,
-            toggleLineVisibility,
-          ),
-        );
+static List<Widget> buildLegendItems(
+  String selectedChart,
+  Map<int, bool> lineVisibility,
+  List<ChartData> chartDataList,
+  Function(int) toggleLineVisibility,
+  bool isAdmin,
+) {
+  if (selectedChart == 'Lượng mưa tích lũy') {
+    return [
+      _buildLegendItem(
+        Colors.green,
+        'lượng mưa tích lũy (mm)',
+        0,
+        lineVisibility,
+        toggleLineVisibility,
+      )
+    ];
+  } else if (selectedChart == 'Lượng mưa') {
+    return [
+      _buildLegendItem(
+        Colors.blue,
+        'lượng mưa (mm)',
+        0,
+        lineVisibility,
+        toggleLineVisibility,
+      )
+    ];
+  } else if (['Piezometer 1', 'Piezometer 2', 'Crackmeter 1', 'Crackmeter 2', 'Crackmeter 3']
+      .contains(selectedChart)) {
+    return [
+      _buildLegendItem(
+        Colors.blue,
+        selectedChart.toLowerCase(),
+        0,
+        lineVisibility,
+        toggleLineVisibility,
+      )
+    ];
+  } else if (selectedChart.startsWith('Đo nghiêng')) {
+    ChartData? tiltData;
+    for (var chart in chartDataList) {
+      if (chart.name == selectedChart) {
+        tiltData = chart;
+        break;
       }
-
-      return legendItems;
     }
 
-    return [];
+    if (tiltData == null || tiltData.dates.isEmpty) {
+      return [];
+    }
+
+    var legendItems = <Widget>[];
+    
+    // Add items for valid indices
+    for (var entry in lineVisibility.entries) {
+      if (entry.key == -1) continue;
+      
+      final index = entry.key;
+      if (index >= 0 && index < tiltData.dates.length) {
+        legendItems.add(
+          _buildLegendItem(
+            Colors.primaries[index % Colors.primaries.length],
+            DateFormat('dd/MM/yyyy HH:mm').format(tiltData.dates[index]),
+            index,
+            lineVisibility,
+            toggleLineVisibility,
+          )
+        );
+      }
+    }
+
+    // Add reference line if enabled
+    if (lineVisibility[-1] ?? false) {
+      legendItems.add(
+        _buildLegendItem(
+          Colors.black,
+          'bắt đầu(19/11/2023)',
+          -1,
+          lineVisibility,
+          toggleLineVisibility,
+        ),
+      );
+    }
+
+    return legendItems;
   }
+
+  return [];
+}
 
   static Widget _buildLegendItem(
     Color color,

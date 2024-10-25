@@ -73,7 +73,7 @@ class ChartMenu extends StatelessWidget {
                   ],
                 ),
                 const Spacer(),
-                if (isAdmin || selectedChart.contains('Lượng mưa'))
+                // if (selectedChart.contains('Lượng mưa'))
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
