@@ -41,7 +41,7 @@
         <!-- Mapbox Access Token -->
         <meta-data
             android:name="com.mapbox.token"
-            android:value="sk.eyJ1IjoibW9ubHljdXRlIiwiYSI6ImNtMDI4enByaDAwMnIycXIwdDhqc3diNHgifQ.cpA69qDo8WHZ7ZxeGzCSlw" />
+            android:value="sk.eyJ1IjoibW9ubHljdXRlIiwiYSI6ImNtMnBtdW9lMjBsMnoyanIxeDZkNjJuMmsifQ.KdAtFoTf_C2PwNqEuY_5Gg" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

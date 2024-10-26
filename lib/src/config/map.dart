@@ -3,7 +3,7 @@ import 'package:truotlo/src/data/map/map_data.dart';
 
 class MapConfig {
   String mapToken =
-      'sk.eyJ1IjoibW9ubHljdXRlIiwiYSI6ImNtMDI4enByaDAwMnIycXIwdDhqc3diNHgifQ.cpA69qDo8WHZ7ZxeGzCSlw';
+      'sk.eyJ1IjoibW9ubHljdXRlIiwiYSI6ImNtMnBtdW9lMjBsMnoyanIxeDZkNjJuMmsifQ.KdAtFoTf_C2PwNqEuY_5Gg';
   LatLng defaultTarget = const LatLng(14.1817, 108.9559);
   double defaultZoom = 9.0;
 
