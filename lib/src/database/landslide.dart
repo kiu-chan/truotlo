@@ -124,42 +124,66 @@ class LandslideDatabase {
     }
   }
 
-  Future<Map<String, int>> getForecastCounts() async {
-    final url = '$_baseUrl/forecast-record-points';
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body) as List;
-      Map<String, int> counts = {
-        'Rất cao': 0,
-        'Cao': 0,
-        'Trung bình': 0,
-        'Thấp': 0,
-        'Rất thấp': 0,
-      };
 
-      for (var item in data) {
-        String nguyCo = item['nguy_co'].toString().trim().toLowerCase();
-        switch (nguyCo) {
-          case 'rất cao':
-            counts['Rất cao'] = (counts['Rất cao'] ?? 0) + 1;
-            break;
-          case 'cao':
-            counts['Cao'] = (counts['Cao'] ?? 0) + 1;
-            break;
-          case 'trung bình':
-            counts['Trung bình'] = (counts['Trung bình'] ?? 0) + 1;
-            break;
-          case 'thấp':
-            counts['Thấp'] = (counts['Thấp'] ?? 0) + 1;
-            break;
-          case 'rất thấp':
-            counts['Rất thấp'] = (counts['Rất thấp'] ?? 0) + 1;
-            break;
-        }
+  String _classifyRiskLevel(String nguyCo) {
+    try {
+      final double value = double.parse(nguyCo);
+      if (value >= 5) {
+        return 'Rất cao';
+      } else if (value >= 4) {
+        return 'Cao';
+      } else if (value >= 3) {
+        return 'Trung bình';
+      } else if (value >= 2) {
+        return 'Thấp';
+      } else {
+        return 'Rất thấp';
       }
-      return counts;
-    } else {
-      throw Exception('Không thể tải dữ liệu dự báo');
+    } catch (e) {
+      print('Error parsing nguy_co value: $e');
+      return 'Không xác định';
+    }
+  }
+
+  Future<Map<String, int>> getForecastCounts(String currentDateTime) async {
+    try {
+      final url = '$_baseUrl/forecast-record-points';
+      final response = await http.get(Uri.parse(url));
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body) as List;
+        final DateTime now = DateTime.now();
+        final String currentHour = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}';
+        
+        // Lọc chỉ lấy các điểm trong giờ hiện tại
+        final currentHourData = data.where((item) {
+          String createdAt = item['created_at'] as String;
+          return createdAt.startsWith(currentHour);
+        }).toList();
+
+        Map<String, int> counts = {
+          'Rất cao': 0,
+          'Cao': 0,
+          'Trung bình': 0,
+          'Thấp': 0,
+          'Rất thấp': 0,
+        };
+
+        for (var item in currentHourData) {
+          String nguyCo = item['nguy_co'].toString();
+          String riskLevel = _classifyRiskLevel(nguyCo);
+          if (counts.containsKey(riskLevel)) {
+            counts[riskLevel] = (counts[riskLevel] ?? 0) + 1;
+          }
+        }
+        
+        return counts;
+      } else {
+        throw Exception('Không thể tải dữ liệu dự báo');
+      }
+    } catch (e) {
+      print('Error getting forecast counts: $e');
+      throw Exception('Lỗi khi lấy dữ liệu dự báo');
     }
   }
 }

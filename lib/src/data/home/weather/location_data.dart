@@ -1,4 +1,4 @@
-import 'package:truotlo/src/data/weather/weather_district.dart';
+import 'package:truotlo/src/data/home/weather/weather_district.dart';
 
 final List<WeatherDistrict> districts = [
   WeatherDistrict('Thành phố Quy Nhơn', [

@@ -20,6 +20,18 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
     super.initState();
     _loadData();
     _updateCurrentTime();
+    _startTimeUpdates();
+  }
+
+  void _startTimeUpdates() {
+    Future.delayed(const Duration(minutes: 1), () {
+      if (mounted) {
+        setState(() {
+          _updateCurrentTime();
+        });
+        _startTimeUpdates();
+      }
+    });
   }
 
   void _updateCurrentTime() {
@@ -29,7 +41,10 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
 
   Future<void> _loadData() async {
     try {
-      final counts = await _forecastService.getForecastCounts();
+      final now = DateTime.now();
+      final dateTimeString = DateFormat('yyyy-MM-dd HH:mm:00').format(now);
+      
+      final counts = await _forecastService.getForecastCounts(dateTimeString);
       setState(() {
         _counts = counts;
         _isLoading = false;
@@ -53,7 +68,7 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
           children: [
             Text(
               'DỰ BÁO LÚC: $_currentTime',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             if (_isLoading)
@@ -89,6 +104,11 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }
 

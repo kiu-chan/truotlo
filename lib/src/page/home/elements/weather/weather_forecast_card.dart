@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:truotlo/src/data/weather/weather_district.dart';
+import 'package:truotlo/src/data/home/weather/weather_district.dart';
 
 class WeatherForecastCard extends StatelessWidget {
   final Map<String, dynamic>? currentWeather;
