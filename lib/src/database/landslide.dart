@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:truotlo/src/config/chart.dart';
 import 'package:truotlo/src/data/chart/landslide_data.dart';
+import 'package:truotlo/src/data/forecast/hourly_forecast_response.dart';
 import 'package:truotlo/src/user/auth_service.dart';
 import 'package:truotlo/src/data/manage/forecast.dart';
 import 'package:truotlo/src/data/manage/hourly_warning.dart';
@@ -184,6 +185,21 @@ class LandslideDatabase {
     } catch (e) {
       print('Error getting forecast counts: $e');
       throw Exception('Lỗi khi lấy dữ liệu dự báo');
+    }
+  }
+
+    Future<HourlyForecastResponse> fetchHourlyForecastPoints() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/forecast-points'));
+      
+      if (response.statusCode == 200) {
+        return HourlyForecastResponse.fromJson(json.decode(response.body));
+      } else {
+        throw Exception('Failed to load hourly forecast points');
+      }
+    } catch (e) {
+      print('Error fetching hourly forecast points: $e');
+      rethrow;
     }
   }
 }

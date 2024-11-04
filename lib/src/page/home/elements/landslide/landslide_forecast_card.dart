@@ -1,33 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import 'package:truotlo/src/page/home/elements/landslide/daily_forecast_point.dart';
 import 'dart:convert';
 
-class DailyForecastPoint {
-  final String maDiem;
-  final String viTri;
-  final Map<String, dynamic> toaDo;
-  final Map<String, dynamic> diaGioi;
-  final List<Map<String, dynamic>> duBao;
-
-  DailyForecastPoint({
-    required this.maDiem,
-    required this.viTri,
-    required this.toaDo,
-    required this.diaGioi,
-    required this.duBao,
-  });
-
-  factory DailyForecastPoint.fromJson(Map<String, dynamic> json) {
-    return DailyForecastPoint(
-      maDiem: json['ma_diem'] ?? '',
-      viTri: json['vi_tri'] ?? '',
-      toaDo: json['toa_do'] ?? {},
-      diaGioi: json['dia_gioi'] ?? {},
-      duBao: List<Map<String, dynamic>>.from(json['du_bao'] ?? []),
-    );
-  }
-}
+import 'package:truotlo/src/page/home/elements/landslide/hourly_forecast_point.dart';
 
 class LandslideForecastCard extends StatefulWidget {
   const LandslideForecastCard({super.key});
@@ -39,15 +16,16 @@ class LandslideForecastCard extends StatefulWidget {
 class LandslideForecastCardState extends State<LandslideForecastCard> {
   bool _showHourlyForecast = true;
   bool _isLoading = true;
-  List<Map<String, dynamic>> _hourlyForecastPoints = [];
+  List<HourlyForecastPoint> _hourlyForecasts = [];
   List<DailyForecastPoint> _dailyForecastPoints = [];
   String _lastUpdateTime = '';
+  String _currentHourKey = '';
   Map<int, int> _riskLevelCounts = {
-    5: 0, // Rất cao
-    4: 0, // Cao
-    3: 0, // Trung bình
-    2: 0, // Thấp
-    1: 0, // Rất thấp
+    5: 0,
+    4: 0,
+    3: 0,
+    2: 0,
+    1: 0,
   };
 
   static const String _dailyApiUrl = 'http://truotlobinhdinh.girc.edu.vn/api/forecasts/current';
@@ -57,6 +35,15 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
   void initState() {
     super.initState();
     _loadForecastData();
+  }
+
+  String _formatDateTime(String dateTime) {
+    try {
+      final dt = DateTime.parse(dateTime);
+      return DateFormat('yyyy-MM-dd HH:mm:ss').format(dt);
+    } catch (e) {
+      return dateTime;
+    }
   }
 
   Future<void> _loadForecastData() async {
@@ -74,24 +61,22 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
     }
   }
 
-  String _formatDateTime(String dateTime) {
-    try {
-      final dt = DateTime.parse(dateTime);
-      return DateFormat('yyyy-MM-dd HH:mm:ss').format(dt);
-    } catch (e) {
-      return dateTime;
-    }
-  }
-
   Future<void> _loadHourlyForecast() async {
     final response = await http.get(Uri.parse(_hourlyApiUrl));
     
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = json.decode(response.body);
       if (responseData['success'] == true && responseData['data'] != null) {
+        // Get the first (and only) key from the data map
+        final String hourKey = responseData['data'].keys.first;
+        final List<dynamic> hourlyData = responseData['data'][hourKey];
+        
         setState(() {
-          _hourlyForecastPoints = List<Map<String, dynamic>>.from(responseData['data']);
-          _lastUpdateTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+          _hourlyForecasts = hourlyData
+              .map((point) => HourlyForecastPoint.fromJson(point))
+              .toList();
+          _currentHourKey = hourKey;
+          _lastUpdateTime = hourKey;
         });
       }
     } else {
@@ -109,25 +94,25 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
           _dailyForecastPoints = List<DailyForecastPoint>.from(
             responseData['du_lieu'].map((x) => DailyForecastPoint.fromJson(x))
           );
-          _lastUpdateTime = responseData['thoi_gian_cap_nhat'];
+          _lastUpdateTime = responseData['thoi_gian_cap_nhat'] ?? '';
         });
-        _updateRiskLevelCounts(_dailyForecastPoints);
+        _updateRiskLevelCounts();
       }
     } else {
       throw Exception('Không thể tải dữ liệu dự báo theo ngày');
     }
   }
 
-  void _updateRiskLevelCounts(List<DailyForecastPoint> points) {
+  void _updateRiskLevelCounts() {
     Map<int, int> counts = {
-      5: 0, // Rất cao
-      4: 0, // Cao
-      3: 0, // Trung bình
-      2: 0, // Thấp
-      1: 0, // Rất thấp
+      5: 0,
+      4: 0,
+      3: 0,
+      2: 0,
+      1: 0,
     };
 
-    for (var point in points) {
+    for (var point in _dailyForecastPoints) {
       for (var forecast in point.duBao) {
         double risk = double.tryParse(forecast['nguy_co'].toString()) ?? 0;
         if (risk >= 5.0) counts[5] = (counts[5] ?? 0) + 1;
@@ -143,31 +128,16 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
     });
   }
 
-  String _getRiskLevel(String value) {
-    try {
-      final double risk = double.parse(value);
-      if (risk >= 5.0) return 'very_high';
-      if (risk >= 4.0) return 'high';
-      if (risk >= 3.0) return 'medium';
-      if (risk >= 2.0) return 'low';
-      return 'very_low';
-    } catch (e) {
-      return 'no_risk';
-    }
-  }
-
   List<String> _getForecastDates() {
     if (_dailyForecastPoints.isEmpty) return [];
     
-    final forecastDates = <String>[];
+    final List<String> forecastDates = [];
     final dateFormat = DateFormat('dd/MM');
-    
-    // Lấy tháng hiện tại từ thời gian cập nhật
     final currentMonth = DateTime.parse(_lastUpdateTime);
     
-    // Tìm ngày nhỏ nhất và lớn nhất trong dự báo
     int minDay = 999;
     int maxDay = 0;
+    
     for (var point in _dailyForecastPoints) {
       for (var forecast in point.duBao) {
         final day = forecast['ngay'] as int;
@@ -176,7 +146,6 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
       }
     }
 
-    // Tạo danh sách ngày từ min đến max
     for (int i = minDay; i <= maxDay; i++) {
       final date = DateTime(currentMonth.year, currentMonth.month, i);
       forecastDates.add(dateFormat.format(date));
@@ -186,29 +155,16 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
   }
 
   Widget _buildHourlyForecastTable() {
-    if (_hourlyForecastPoints.isEmpty) {
+    if (_hourlyForecasts.isEmpty) {
       return const Center(child: Text('Không có dữ liệu dự báo theo giờ'));
     }
 
-    // Lọc dữ liệu của giờ hiện tại
-    final currentHour = DateTime.now().hour;
-    final currentForecasts = _hourlyForecastPoints.where((point) {
-      final createdAt = DateTime.tryParse(point['created_at'] ?? '');
-      return createdAt?.hour == currentHour;
-    }).toList();
-
-    // Nhóm theo huyện
-    Map<String, List<Map<String, dynamic>>> groupedByDistrict = {};
-    for (var point in currentForecasts) {
-      final district = point['huyen'] ?? 'Không xác định';
-      if (!groupedByDistrict.containsKey(district)) {
-        groupedByDistrict[district] = [];
+    Map<String, List<HourlyForecastPoint>> groupedByDistrict = {};
+    for (var point in _hourlyForecasts) {
+      if (!groupedByDistrict.containsKey(point.huyen)) {
+        groupedByDistrict[point.huyen] = [];
       }
-      groupedByDistrict[district]!.add(point);
-    }
-
-    if (groupedByDistrict.isEmpty) {
-      return const Center(child: Text('Không có dữ liệu dự báo cho giờ hiện tại'));
+      groupedByDistrict[point.huyen]!.add(point);
     }
 
     return SingleChildScrollView(
@@ -225,17 +181,18 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
           defaultColumnWidth: const IntrinsicColumnWidth(),
           children: [
             buildTableRow(
-              ['Huyện', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'],
+              ['Huyện', 'Xã', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'],
               isHeader: true,
             ),
             ...groupedByDistrict.entries.expand((district) {
               return district.value.map((point) {
                 return buildTableRow([
-                  district.key,
-                  point['vi_tri'] ?? '',
-                  buildRiskIcon(_getRiskLevel(point['nguy_co_lu_quet']?.toString() ?? '0')),
-                  buildRiskIcon(_getRiskLevel(point['nguy_co_truot_nong']?.toString() ?? '0')),
-                  buildRiskIcon(_getRiskLevel(point['nguy_co_truot_lon']?.toString() ?? '0')),
+                  point.huyen,
+                  point.xa,
+                  point.viTri,
+                  buildRiskIcon(_getRiskLevel(point.nguyCoLuQuet)),
+                  buildRiskIcon(_getRiskLevel(point.nguyCoTruotNong)),
+                  buildRiskIcon(_getRiskLevel(point.nguyCoTruotLon)),
                 ]);
               }).toList();
             }).toList(),
@@ -251,9 +208,8 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
     }
 
     final forecastDates = _getForecastDates();
-
-    // Nhóm theo huyện
     Map<String, List<DailyForecastPoint>> groupedByDistrict = {};
+    
     for (var point in _dailyForecastPoints) {
       String district = point.diaGioi['huyen'] ?? 'Không xác định';
       if (!groupedByDistrict.containsKey(district)) {
@@ -281,7 +237,10 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
             ),
             ...groupedByDistrict.entries.expand((district) {
               return district.value.map((point) {
-                final riskIcons = List<Widget>.filled(forecastDates.length, buildRiskIcon('no_risk'));
+                final List<Widget> riskIcons = List<Widget>.filled(
+                  forecastDates.length, 
+                  buildRiskIcon('no_risk')
+                );
                 
                 for (var forecast in point.duBao) {
                   final day = forecast['ngay'] as int;
@@ -321,7 +280,7 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         fillColor: Colors.blue,
         onPressed: (int index) {
           setState(() {
-_showHourlyForecast = index == 0;
+            _showHourlyForecast = index == 0;
             _loadForecastData();
           });
         },
@@ -339,6 +298,19 @@ _showHourlyForecast = index == 0;
     );
   }
 
+  String _getRiskLevel(String value) {
+    try {
+      final double risk = double.parse(value);
+      if (risk >= 5.0) return 'very_high';
+      if (risk >= 4.0) return 'high';
+      if (risk >= 3.0) return 'medium';
+      if (risk >= 2.0) return 'low';
+      return 'very_low';
+    } catch (e) {
+      return 'no_risk';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -351,7 +323,7 @@ _showHourlyForecast = index == 0;
             color: Colors.blue,
             padding: const EdgeInsets.all(16.0),
             child: const Text(
-              'Thời tiết',
+              'Dự báo nguy cơ trượt lở',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -375,9 +347,11 @@ _showHourlyForecast = index == 0;
                     children: [
                       const Icon(Icons.warning_amber_rounded, color: Colors.amber),
                       const SizedBox(width: 8),
-                      Text(
-                        'DỰ BÁO LÚC: ${_formatDateTime(_lastUpdateTime)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          'DỰ BÁO LÚC: ${_showHourlyForecast ? _currentHourKey : _formatDateTime(_lastUpdateTime)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),
@@ -411,6 +385,7 @@ _showHourlyForecast = index == 0;
   }
 }
 
+// widgets/landslide_forecast_utils.dart
 TableRow buildTableRow(List<dynamic> cells, {bool isHeader = false}) {
   return TableRow(
     decoration: BoxDecoration(
@@ -467,18 +442,18 @@ Widget buildLegend(BuildContext context) {
           style: TextStyle(fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
       _buildLegendItem(
-          context, 'no_risk', 'KHÔNG CÓ', 'Không có nguy cơ trượt lở'),
+          context, 'no_risk', 'KHÔNG CÓ', 'Hiếm khi xảy ra trượt lở'),
       _buildLegendItem(
-          context, 'very_low', 'RẤT THẤP', 'Nguy cơ < 2'),
+          context, 'very_low', 'RẤT THẤP', 'Chú ý nguy cơ phát sinh trượt lở'),
       _buildLegendItem(
-          context, 'low', 'THẤP', 'Nguy cơ từ 2 đến < 3'),
+          context, 'low', 'THẤP', 'Chú ý trượt lở có thể phát sinh cục bộ, nhất là các vị trí đã có dấu hiệu nguy hiểm như khe nứt tách, khu vực đã có dấu hiệu dịch chuyển từ trước, khu vực đang khắc phục trượt lở (nếu có)....'),
       _buildLegendItem(
-          context, 'medium', 'TRUNG BÌNH', 'Nguy cơ từ 3 đến < 4'),
+          context, 'medium', 'TRUNG BÌNH', 'Cảnh báo phát sinh trượt lở cục bộ, chủ yếu trượt lở có quy mô nhỏ. Chủ động cảnh giác đối với các khu vực nguy hiểm.'),
       _buildLegendItem(
-          context, 'high', 'CAO', 'Nguy cơ từ 4 đến < 5',
+          context, 'high', 'CAO', 'Cảnh báo nguy cơ trượt lở trên diện rộng, có thể phát sinh trượt lở quy mô lớn. Theo dõi và sẵn sàng ứng phó ở các khu vực nguy hiểm.',
           boldLevel: true),
       _buildLegendItem(
-          context, 'very_high', 'RẤT CAO', 'Nguy cơ >= 5',
+          context, 'very_high', 'RẤT CAO', 'Trượt lở trên diện rộng, phát sinh trượt lở quy mô lớn. Di chuyển dân trong vùng nguy hiểm đến nơi an toàn',
           boldLevel: true),
     ],
   );
