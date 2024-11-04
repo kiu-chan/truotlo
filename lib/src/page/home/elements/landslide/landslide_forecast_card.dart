@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:truotlo/src/page/home/elements/landslide/daily_forecast_point.dart';
 import 'dart:convert';
-
 import 'package:truotlo/src/page/home/elements/landslide/hourly_forecast_point.dart';
 
 class LandslideForecastCard extends StatefulWidget {
@@ -35,6 +34,26 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
   void initState() {
     super.initState();
     _loadForecastData();
+    // Thiết lập timer để tự động cập nhật dữ liệu mỗi giờ
+    _setupPeriodicUpdate();
+  }
+
+  void _setupPeriodicUpdate() {
+    // Tính toán thời gian đến đầu giờ tiếp theo
+    final now = DateTime.now();
+    final nextHour = DateTime(now.year, now.month, now.day, now.hour + 1);
+    final duration = nextHour.difference(now);
+
+    // Đặt timer để cập nhật vào đầu giờ tiếp theo
+    Future.delayed(duration, () {
+      _loadForecastData();
+      // Sau đó thiết lập cập nhật định kỳ mỗi giờ
+      Stream.periodic(const Duration(hours: 1)).listen((_) {
+        if (mounted) {
+          _loadForecastData();
+        }
+      });
+    });
   }
 
   String _formatDateTime(String dateTime) {
@@ -67,17 +86,28 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = json.decode(response.body);
       if (responseData['success'] == true && responseData['data'] != null) {
-        // Get the first (and only) key from the data map
-        final String hourKey = responseData['data'].keys.first;
-        final List<dynamic> hourlyData = responseData['data'][hourKey];
+        // Lấy thời gian hiện tại
+        final now = DateTime.now();
+        final currentHourKey = DateFormat('yyyy-MM-dd HH').format(now);
         
-        setState(() {
-          _hourlyForecasts = hourlyData
-              .map((point) => HourlyForecastPoint.fromJson(point))
-              .toList();
-          _currentHourKey = hourKey;
-          _lastUpdateTime = hourKey;
-        });
+        // Kiểm tra xem có dữ liệu cho giờ hiện tại không
+        if (responseData['data'].containsKey(currentHourKey)) {
+          final List<dynamic> hourlyData = responseData['data'][currentHourKey];
+          
+          setState(() {
+            _hourlyForecasts = hourlyData
+                .map((point) => HourlyForecastPoint.fromJson(point))
+                .toList();
+            _currentHourKey = currentHourKey;
+            _lastUpdateTime = currentHourKey;
+          });
+        } else {
+          setState(() {
+            _hourlyForecasts = [];
+            _currentHourKey = currentHourKey;
+            _lastUpdateTime = currentHourKey;
+          });
+        }
       }
     } else {
       throw Exception('Không thể tải dữ liệu dự báo theo giờ');
@@ -156,7 +186,7 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
 
   Widget _buildHourlyForecastTable() {
     if (_hourlyForecasts.isEmpty) {
-      return const Center(child: Text('Không có dữ liệu dự báo theo giờ'));
+      return const Center(child: Text('Không có dữ liệu dự báo cho giờ hiện tại'));
     }
 
     Map<String, List<HourlyForecastPoint>> groupedByDistrict = {};
@@ -383,9 +413,15 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    // Cleanup any resources
+    super.dispose();
+  }
 }
 
-// widgets/landslide_forecast_utils.dart
+// Utility functions for table and risk icons
 TableRow buildTableRow(List<dynamic> cells, {bool isHeader = false}) {
   return TableRow(
     decoration: BoxDecoration(
