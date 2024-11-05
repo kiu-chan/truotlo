@@ -19,6 +19,8 @@ class MapMenu extends StatelessWidget {
   final Function(bool?) onCommunesVisibilityChanged;
   final Function(bool?) onLandslidePointsVisibilityChanged;
   final Function(String, bool?) onDistrictLandslideVisibilityChanged;
+  final bool showOnlyLandslideRisk;
+  final Function(bool?) onShowOnlyLandslideRiskChanged;
 
   const MapMenu({
     super.key,
@@ -38,6 +40,8 @@ class MapMenu extends StatelessWidget {
     required this.onLandslidePointsVisibilityChanged,
     required this.districtLandslideVisibility,
     required this.onDistrictLandslideVisibilityChanged,
+    required this.showOnlyLandslideRisk,  // Thêm vào đây
+    required this.onShowOnlyLandslideRiskChanged,
   });
 
   @override
@@ -120,6 +124,13 @@ class MapMenu extends StatelessWidget {
                 );
               }).toList(),
             ),
+            if (isLandslidePointsVisible)
+              CheckboxListTile(
+                title: const Text('Chỉ hiện điểm trượt nông'),
+                subtitle: const Text('Ẩn các điểm không có nguy cơ'),
+                value: showOnlyLandslideRisk,
+                onChanged: onShowOnlyLandslideRiskChanged,
+              ),
         ],
       ),
     );

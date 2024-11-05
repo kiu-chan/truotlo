@@ -32,6 +32,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   bool isBorderVisible = false;
   bool isCommunesVisible = false;
   bool isLandslidePointsVisible = true;
+  bool showOnlyLandslideRisk = false;
   List<District> districts = [];
   Set<String> allDistricts = {};
   List<Symbol> _districtLabels = [];
@@ -390,6 +391,21 @@ void showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
       });
     },
   );
+}
+
+void toggleShowOnlyLandslideRisk(bool? value) async {
+  if (value != null) {
+    setState(() {
+      showOnlyLandslideRisk = value;
+    });
+    if (_isMapInitialized) {
+      await _mapUtils.clearLandslidePointsOnMap();
+      await _mapUtils.drawLandslidePointsOnMap(
+        landslidePoints,
+        showOnlyLandslideRisk: showOnlyLandslideRisk
+      );
+    }
+  }
 }
 
 Widget buildInfoRow(String label, String value) {
