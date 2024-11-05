@@ -231,8 +231,16 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   void onSymbolTapped(Symbol symbol) async {
     if (symbol.data != null && symbol.data!['id'] != null) {
       int landslideId = symbol.data!['id'];
-      Map<String, dynamic> landslideDetail =
-          await database.landslideDatabase.fetchLandslideDetail(landslideId);
+      Map<String, dynamic> landslideDetail = await database.landslideDatabase.fetchLandslideDetail(landslideId);
+      
+      // Thêm thông tin forecast vào landslideDetail
+      if (symbol.data!['forecast_data'] != null) {
+        Map<String, dynamic> forecastData = symbol.data!['forecast_data'];
+        landslideDetail['nguy_co_lu_quet'] = forecastData['nguy_co_lu_quet'];
+        landslideDetail['nguy_co_truot_nong'] = forecastData['nguy_co_truot_nong'];
+        landslideDetail['nguy_co_truot_lon'] = forecastData['nguy_co_truot_lon'];
+      }
+      
       showLandslideDetailDialog(landslideDetail);
     }
   }
@@ -276,126 +284,223 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   }
 
   // Phương thức hiển thị hộp thoại chi tiết điểm trượt lở
-  void showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
-    LatLng landslideLocation;
-    try {
-      landslideLocation = LatLng(
-          double.parse(landslideDetail['lat'].toString()),
-          double.parse(landslideDetail['lon'].toString()));
-    } catch (e) {
-      print('Error parsing coordinates: $e');
-      showErrorSnackBar('Lỗi khi xử lý tọa độ điểm trượt lở.');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Thông tin điểm trượt lở'),
-            content: SingleChildScrollView(
-              child: ListBody(
-                children: <Widget>[
-                  Text('Vị trí: ${landslideDetail['vi_tri']}'),
-                  Text(
-                      'Xã: ${landslideDetail['commune_name'] ?? landslideDetail['ten_xa'] ?? 'Không có thông tin'}'),
-                  Text(
-                      'Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
-                  Text('Mô tả: ${landslideDetail['mo_ta']}'),
-                  Text(
-                    'Tọa độ: Kinh độ ${convertToDMS(landslideDetail['lon'], false)}, Vĩ độ ${convertToDMS(landslideDetail['lat'], true)}',
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    child: const Text('Khoảng cách theo đường chim bay'),
-                    onPressed: () {
-                      if (currentLocation != null) {
-                        double distance = _calculateDistance(
-                            currentLocation!, landslideLocation);
-                        setState(() {
-                          landslideDetail['distance'] = distance;
-                        });
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content:
-                                  Text('Không thể xác định vị trí hiện tại')),
-                        );
-                      }
-                    },
-                  ),
-                  if (landslideDetail.containsKey('distance'))
-                    Center(
-                      child: Text(
-                          'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(2)} km'),
-                    ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    child: const Text('Tìm đường trực tiếp'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _findRoute(landslideLocation, landslideDetail['id']);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.map),
-                    label: const Text('Mở trong Google Maps'),
-                    onPressed: () => _openGoogleMaps(landslideLocation),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text('Hình ảnh:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  if (landslideDetail['images'] != null &&
-                      (landslideDetail['images'] as List).isNotEmpty)
-                    Column(
-                      children:
-                          (landslideDetail['images'] as List).map((image) {
-                        String imageUrl =
-                            'http://truotlobinhdinh.girc.edu.vn/storage/$image';
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Image.network(
-                            imageUrl,
-                            loadingBuilder: (BuildContext context, Widget child,
-                                ImageChunkEvent? loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes !=
-                                          null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Text('Không thể tải hình ảnh');
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    )
-                  else
-                    const Text('Không có hình ảnh'),
-                ],
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Đóng'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        });
-      },
+void showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
+  LatLng landslideLocation;
+  try {
+    landslideLocation = LatLng(
+      double.parse(landslideDetail['lat'].toString()),
+      double.parse(landslideDetail['lon'].toString()),
     );
+  } catch (e) {
+    print('Error parsing coordinates: $e');
+    showErrorSnackBar('Lỗi khi xử lý tọa độ điểm trượt lở.');
+    return;
   }
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return StatefulBuilder(builder: (context, setState) {
+        return AlertDialog(
+          title: const Text('Thông tin điểm trượt lở'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                buildInfoRow('Xã', landslideDetail['commune_name'] ?? landslideDetail['ten_xa'] ?? 'Không có thông tin'),
+                buildInfoRow('Huyện', landslideDetail['district_name'] ?? 'Không có thông tin'),
+                buildInfoRow('Vị trí', landslideDetail['vi_tri'] ?? 'Không có thông tin'),
+                buildInfoRow('Tọa độ', 
+                  'Kinh độ ${convertToDMS(landslideDetail['lon'], false)}, '
+                  'Vĩ độ ${convertToDMS(landslideDetail['lat'], true)}'
+                ),
+                buildInfoRow('Mô tả', landslideDetail['mo_ta'] ?? 'Không có thông tin'),
+                
+                // Thêm 3 loại nguy cơ
+                const SizedBox(height: 20),
+                buildRiskRow(
+                  'Nguy cơ lũ quét:',
+                  landslideDetail['nguy_co_lu_quet']?.toString() ?? 'Không có thông tin',
+                  _getRiskColor(landslideDetail['nguy_co_lu_quet']?.toString())
+                ),
+                buildRiskRow(
+                  'Nguy cơ trượt nông:',
+                  landslideDetail['nguy_co_truot_nong']?.toString() ?? 'Không có thông tin',
+                  _getRiskColor(landslideDetail['nguy_co_truot_nong']?.toString())
+                ),
+                buildRiskRow(
+                  'Nguy cơ trượt lớn:',
+                  landslideDetail['nguy_co_truot_lon']?.toString() ?? 'Không có thông tin',
+                  _getRiskColor(landslideDetail['nguy_co_truot_lon']?.toString())
+                ),
+                
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  child: const Text('Khoảng cách theo đường chim bay'),
+                  onPressed: () {
+                    if (currentLocation != null) {
+                      double distance = _calculateDistance(currentLocation!, landslideLocation);
+                      setState(() {
+                        landslideDetail['distance'] = distance;
+                      });
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
+                      );
+                    }
+                  },
+                ),
+                if (landslideDetail.containsKey('distance'))
+                  Center(
+                    child: Text(
+                      'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(2)} km'
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  child: const Text('Tìm đường trực tiếp'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _findRoute(landslideLocation, landslideDetail['id']);
+                  },
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.map),
+                  label: const Text('Mở trong Google Maps'),
+                  onPressed: () => _openGoogleMaps(landslideLocation),
+                ),
+                if (landslideDetail['images'] != null &&
+                    (landslideDetail['images'] as List).isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const Text('Hình ảnh:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...buildImageList(landslideDetail['images']),
+                ]
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Đóng'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      });
+    },
+  );
+}
+
+Widget buildInfoRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Expanded(
+          child: Text(value),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget buildRiskRow(String label, String value, Color textColor) {
+  String displayValue;
+  if (value == "0") {
+    displayValue = "Không có";
+  } else if (value == "1") {
+    displayValue = "Rất thấp";
+  } else if (double.tryParse(value) != null) {
+    double numValue = double.parse(value);
+    if (numValue >= 5) {
+      displayValue = "Rất cao";
+    } else if (numValue >= 4) {
+      displayValue = "Cao";
+    } else if (numValue >= 3) {
+      displayValue = "Trung bình";
+    } else if (numValue >= 2) {
+      displayValue = "Thấp";
+    } else {
+      displayValue = "Rất thấp";
+    }
+  } else {
+    displayValue = "Không xác định";
+  }
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            displayValue,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Color _getRiskColor(String? value) {
+  if (value == null || value == "0") return Colors.black;
+  try {
+    double numValue = double.parse(value);
+    if (numValue >= 5) return Colors.purple; // Rất cao
+    if (numValue >= 4) return Colors.red; // Cao
+    if (numValue >= 3) return Colors.orange; // Trung bình
+    if (numValue >= 2) return Colors.blue; // Thấp
+    return Colors.green; // Rất thấp
+  } catch (e) {
+    return Colors.black;
+  }
+}
+
+List<Widget> buildImageList(List<dynamic> images) {
+  return images.map((image) {
+    String imageUrl = 'http://truotlobinhdinh.girc.edu.vn/storage/$image';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Image.network(
+        imageUrl,
+        loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return const Text('Không thể tải hình ảnh');
+        },
+      ),
+    );
+  }).toList();
+}
 
   void _findRoute(LatLng destination, int destinationId) async {
     if (currentLocation == null) {

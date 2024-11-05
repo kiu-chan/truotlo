@@ -236,73 +236,45 @@ class MapUtils {
 
       Map<String, dynamic>? forecastData;
       List<dynamic>? currentForecasts;
+      Map<String, Map<String, dynamic>> forecastMap = {};
 
       if (forecastResponse.statusCode == 200) {
         forecastData = json.decode(forecastResponse.body);
-        // Lấy dữ liệu của thời điểm mới nhất (key đầu tiên trong data)
         String latestTimestamp = forecastData!['data'].keys.first;
         currentForecasts = forecastData['data'][latestTimestamp];
         
-        // In ra tất cả ten_diem từ forecast
-        print('\n=== Danh sách tất cả ten_diem từ forecast ===');
+        // Tạo map ánh xạ từ ten_diem sang forecast data
         for (var forecast in currentForecasts!) {
-          String tenDiem = forecast['ten_diem'].toString();
-          String tenDiemCleaned = tenDiem.replaceAll('"', '');
-          print('ten_diem gốc: $tenDiem -> sau khi xử lý: $tenDiemCleaned');
+          String tenDiem = forecast['ten_diem'].toString().replaceAll('"', '');
+          forecastMap[tenDiem] = forecast;
         }
-        print('==========================================\n');
       }
 
       for (var point in points) {
-        String iconImage = 'landslide_0'; // Mặc định icon 0
-        print('\nĐang xử lý điểm: ');
-        print('id: ${point.id}');
-        print('object_id: ${point.objectId}');
-        
-        // Nếu có dữ liệu dự báo, tìm điểm tương ứng
-        if (currentForecasts != null) {
-          var matchingForecast = currentForecasts.firstWhere(
-            (forecast) {
-              String tenDiem = forecast['ten_diem'].toString().replaceAll('"', '');
-              String objectId = point.objectId.toString();
-              bool isMatch = tenDiem == objectId;
-              
-              print('So sánh: ten_diem = $tenDiem với object_id = $objectId -> ${isMatch ? 'KHỚP' : 'KHÔNG KHỚP'}');
-              
-              return isMatch;
-            },
-            orElse: () => null
-          );
+        String iconImage = 'landslide_0';
+        String objectId = point.objectId.toString();
+        Map<String, dynamic>? matchingForecast = forecastMap[objectId];
 
-          if (matchingForecast != null) {
-            // Lấy giá trị nguy_co_truot_nong để xác định icon
-            String nguyCo = matchingForecast['nguy_co_truot_nong'].toString();
-            print('Tìm thấy điểm khớp! nguy_co_truot_nong = $nguyCo');
-            
-            try {
-              double value = double.parse(nguyCo);
-              String oldIcon = iconImage;
-              if (value >= 5) {
-                iconImage = 'landslide_5';
-              } else if (value >= 4) {
-                iconImage = 'landslide_4';
-              } else if (value >= 3) {
-                iconImage = 'landslide_3';
-              } else if (value >= 2) {
-                iconImage = 'landslide_2';
-              } else if (value >= 1) {
-                iconImage = 'landslide_1';
-              }
-              print('Chuyển icon từ $oldIcon -> $iconImage (giá trị nguy cơ: $value)');
-            } catch (e) {
-              print('Lỗi khi parse nguy_co_truot_nong: $e');
+        if (matchingForecast != null) {
+          String nguyCo = matchingForecast['nguy_co_truot_nong'].toString();
+          try {
+            double value = double.parse(nguyCo);
+            if (value >= 5) {
+              iconImage = 'landslide_5';
+            } else if (value >= 4) {
+              iconImage = 'landslide_4';
+            } else if (value >= 3) {
+              iconImage = 'landslide_3';
+            } else if (value >= 2) {
+              iconImage = 'landslide_2';
+            } else if (value >= 1) {
+              iconImage = 'landslide_1';
             }
-          } else {
-            print('Không tìm thấy điểm khớp -> sử dụng icon mặc định landslide_0');
+          } catch (e) {
+            print('Lỗi khi parse nguy_co_truot_nong: $e');
           }
         }
 
-        // Thêm điểm vào bản đồ với icon tương ứng
         Symbol symbol = await _mapController.addSymbol(
           SymbolOptions(
             geometry: point.location,
@@ -314,6 +286,7 @@ class MapUtils {
             'id': point.id,
             'district': point.district,
             'object_id': point.objectId,
+            'forecast_data': matchingForecast, // Lưu thông tin forecast vào symbol data
           },
         );
         _drawnLandslidePoints.add(symbol);
