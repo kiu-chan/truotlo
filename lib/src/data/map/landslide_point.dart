@@ -2,26 +2,26 @@ import 'package:mapbox_gl/mapbox_gl.dart';
 
 class LandslidePoint {
   final int id;
-  final LatLng location;
+  final int objectId;  // Thêm trường objectId
   final String district;
+  final LatLng location;
 
-  LandslidePoint(this.id, this.location, this.district);
+  LandslidePoint({
+    required this.id,
+    required this.objectId,  // Thêm vào constructor
+    required this.district,
+    required this.location,
+  });
 
   factory LandslidePoint.fromJson(Map<String, dynamic> json) {
     return LandslidePoint(
-      json['id'] is int ? json['id'] : int.parse(json['id']),
-      LatLng(
-        _parseDouble(json['lat']),
-        _parseDouble(json['lon'])
+      id: json['id'],
+      objectId: json['object_id'],  // Parse từ JSON
+      district: json['district'],
+      location: LatLng(
+        double.parse(json['lat'].toString()),
+        double.parse(json['lon'].toString()),
       ),
-      json['district'] as String,
     );
-  }
-
-  static double _parseDouble(dynamic value) {
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.parse(value);
-    throw FormatException('Invalid numeric value: $value');
   }
 }

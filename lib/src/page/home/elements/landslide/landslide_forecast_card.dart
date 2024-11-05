@@ -149,7 +149,7 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
         else if (risk >= 4.0) counts[4] = (counts[4] ?? 0) + 1;
         else if (risk >= 3.0) counts[3] = (counts[3] ?? 0) + 1;
         else if (risk >= 2.0) counts[2] = (counts[2] ?? 0) + 1;
-        else counts[1] = (counts[1] ?? 0) + 1;
+        else if (risk > 0) counts[1] = (counts[1] ?? 0) + 1;
       }
     }
 
@@ -335,7 +335,8 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
       if (risk >= 4.0) return 'high';
       if (risk >= 3.0) return 'medium';
       if (risk >= 2.0) return 'low';
-      return 'very_low';
+      if (risk > 0) return 'very_low';
+      return 'no_risk';
     } catch (e) {
       return 'no_risk';
     }

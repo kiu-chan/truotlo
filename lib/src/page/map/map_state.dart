@@ -1,26 +1,25 @@
-import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:truotlo/src/data/map/district_data.dart';
-import 'package:truotlo/src/data/map/landslide_point.dart';
-import 'package:truotlo/src/data/forecast/hourly_forecast_response.dart';
 import 'package:truotlo/src/data/map/map_data.dart';
+import 'package:truotlo/src/config/map.dart';
 import 'package:truotlo/src/database/database.dart';
 import 'package:truotlo/src/database/commune.dart';
-import 'package:truotlo/src/config/map.dart';
-import 'package:truotlo/src/page/home/elements/landslide/hourly_forecast_point.dart';
+import 'package:truotlo/src/data/map/landslide_point.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'elements/map_utils.dart';
 import 'elements/location_service.dart';
+import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 import 'dart:math' show cos, sqrt, asin;
 
 mixin MapState<T extends StatefulWidget> on State<T> {
-  // Basic Map Configuration
+  // Các biến trạng thái
   String currentStyle = MapboxStyles.MAPBOX_STREETS;
   late MapboxMapController mapController;
   late MapUtils _mapUtils;
-  final List<MapStyleCategory> styleCategories = MapConfig().getStyleCategories();
+  final List<MapStyleCategory> styleCategories =
+      MapConfig().getStyleCategories();
   final DefaultDatabase database = DefaultDatabase();
   final LocationService locationService = LocationService();
 
@@ -28,7 +27,6 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   double defaultZoom = MapConfig().getDefaultZoom();
   String mapToken = MapConfig().getMapToken();
 
-  // State Variables
   LatLng? currentLocation;
   bool isDistrictsVisible = true;
   bool isBorderVisible = false;
@@ -44,22 +42,16 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   Map<int, bool> districtVisibility = {};
   Map<String, bool> districtLandslideVisibility = {};
 
-  // Hourly Forecast State
-  List<HourlyForecastPoint> _hourlyForecastPoints = [];
-  String _currentForecastHour = '';
-  Timer? _refreshTimer;
-  bool _isLoadingHourlyForecast = false;
-
-  // Route State
-  bool _isRouteDisplayed = false;
-  int? _currentRouteId;
   int? _currentSearchId;
 
-  // Loading State
+  bool _isRouteDisplayed = false;
+  int? _currentRouteId;
+
   bool isDistrictsLoaded = false;
   bool isBorderLoaded = false;
   bool isCommunesLoaded = false;
   bool isLandslidePointsLoaded = false;
+
   bool _isMapInitialized = false;
 
   @override
@@ -67,16 +59,14 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     super.initState();
     connectToDatabase();
     initializeLocationService();
-    _fetchHourlyForecastPoints();
-    _startPeriodicRefresh();
   }
 
-  // Database Connection
+  // Phương thức khởi tạo kết nối đến cơ sở dữ liệu
   Future<void> connectToDatabase() async {
     await database.connect();
   }
 
-  // Data Initialization Methods
+  // Phương thức khởi tạo dữ liệu ban đầu
   Future<void> _initializeData() async {
     if (isDistrictsVisible) {
       await _fetchDistricts();
@@ -92,6 +82,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
   }
 
+  // Phương thức lấy dữ liệu các huyện
   Future<void> _fetchDistricts() async {
     if (!isDistrictsLoaded) {
       try {
@@ -112,6 +103,7 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
   }
 
+  // Phương thức lấy dữ liệu đường biên
   Future<void> _fetchBorderPolygons() async {
     if (!isBorderLoaded) {
       try {
@@ -123,11 +115,13 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu đường viền: $e');
-        showErrorSnackBar('Không thể tải dữ liệu đường viền. Vui lòng thử lại sau.');
+        showErrorSnackBar(
+            'Không thể tải dữ liệu đường viền. Vui lòng thử lại sau.');
       }
     }
   }
 
+  // Phương thức lấy dữ liệu các xã
   Future<void> _fetchCommunes() async {
     if (!isCommunesLoaded) {
       try {
@@ -136,7 +130,6 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         setState(() {});
         if (_isMapInitialized) {
           await _mapUtils.drawCommunesOnMap(communes);
-          await _drawCommuneLabels();
         }
       } catch (e) {
         print('Lỗi khi lấy dữ liệu xã: $e');
@@ -145,12 +138,14 @@ mixin MapState<T extends StatefulWidget> on State<T> {
     }
   }
 
+  // Phương thức lấy dữ liệu các điểm trượt lở
   Future<void> _fetchLandslidePoints() async {
     if (!isLandslidePointsLoaded) {
       try {
         landslidePoints = await database.fetchLandslidePoints();
         isLandslidePointsLoaded = true;
 
+        // Initialize district visibility
         allDistricts = landslidePoints.map((point) => point.district).toSet();
         districtLandslideVisibility = {
           for (var district in allDistricts) district: true
@@ -163,178 +158,76 @@ mixin MapState<T extends StatefulWidget> on State<T> {
         }
       } catch (e) {
         print('Error fetching landslide points: $e');
-        showErrorSnackBar('Không thể tải dữ liệu điểm trượt lở. Vui lòng thử lại sau.');
+        showErrorSnackBar(
+            'Unable to load landslide point data. Please try again later.');
       }
     }
   }
 
-  // Hourly Forecast Methods
-  void _startPeriodicRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
-      _fetchHourlyForecastPoints();
-    });
-  }
-
-  Future<void> _fetchHourlyForecastPoints() async {
-    if (_isLoadingHourlyForecast) return;
-
-    setState(() {
-      _isLoadingHourlyForecast = true;
-    });
-
-    try {
-      final response = await database.landslideDatabase.fetchHourlyForecastPoints();
-      if (response.success && response.data.isNotEmpty) {
-        final newHour = response.data.keys.first;
-        final newPoints = response.data[newHour] ?? [];
-
-        if (newHour != _currentForecastHour || 
-            newPoints.length != _hourlyForecastPoints.length) {
-          setState(() {
-            _currentForecastHour = newHour;
-            _hourlyForecastPoints = newPoints;
-          });
-
-          if (_isMapInitialized) {
-            await _mapUtils.drawHourlyForecastPoints(newPoints);
-          }
-
-          _showUpdateNotification(newHour);
-        }
-      }
-    } catch (e) {
-      print('Error fetching hourly forecast points: $e');
-      showErrorSnackBar('Không thể tải dữ liệu dự báo theo giờ. Vui lòng thử lại sau.');
-    } finally {
+  void toggleDistrictLandslideVisibility(String district, bool? value) {
+    if (value != null) {
       setState(() {
-        _isLoadingHourlyForecast = false;
+        districtLandslideVisibility[district] = value;
       });
+      _updateLandslidePointsVisibility();
     }
   }
 
-  void _showUpdateNotification(String hour) {
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Đã cập nhật dữ liệu dự báo cho $hour'),
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: 'Đóng',
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
-    );
+  void _updateLandslidePointsVisibility() {
+    if (_isMapInitialized) {
+      _mapUtils.updateLandslidePointsVisibility(
+          landslidePoints, districtLandslideVisibility);
+    }
   }
 
-  // Map Event Handlers
+  // Phương thức khởi tạo bản đồ
   void onMapCreated(MapboxMapController controller) async {
     mapController = controller;
     _mapUtils = MapUtils(mapController);
     _isMapInitialized = true;
 
-    await _mapUtils.loadMapIcons();
     await _initializeData();
+
     mapController.onSymbolTapped.add(onSymbolTapped);
   }
 
-void onStyleLoaded() async {
-  if (isDistrictsVisible && isDistrictsLoaded) {
-    await _mapUtils.drawDistrictsOnMap(districts);
+  // Phương thức xử lý khi style bản đồ được tải
+  void onStyleLoaded() async {
+    if (isDistrictsVisible && isDistrictsLoaded) {
+      await _mapUtils.drawDistrictsOnMap(districts);
+    }
+    if (isBorderVisible && isBorderLoaded) {
+      await _mapUtils.drawPolygonsOnMap(borderPolygons);
+    }
+    if (isCommunesVisible && isCommunesLoaded) {
+      await _mapUtils.drawCommunesOnMap(communes);
+    }
+
+    // Thêm hình ảnh cho điểm trượt lở
+    final ByteData bytes =
+        await rootBundle.load('lib/assets/map/landslide_0.png');
+    final Uint8List list = bytes.buffer.asUint8List();
+    await mapController.addImage("location_on", list);
+
+    if (isLandslidePointsVisible && isLandslidePointsLoaded) {
+      await _mapUtils.clearLandslidePointsOnMap();
+      await _mapUtils.drawLandslidePointsOnMap(landslidePoints);
+    }
+
     for (var district in districts) {
       await _mapUtils.toggleDistrictVisibility(
-        district.id,
-        districtVisibility[district.id] ?? true
-      );
+          district.id, districtVisibility[district.id] ?? true);
     }
-    LatLng center;
-    for (var district in districts) {
-      try {
-        center = _calculatePolygonCenter(district.polygons);
-        await mapController.addSymbol(
-          SymbolOptions(
-            geometry: center,
-            textField: district.name,
-            textOffset: const Offset(0, 0.8),
-            textAnchor: 'top',
-            textSize: 16,
-            textColor: '#000000',
-            textHaloColor: '#FFFFFF',
-            textHaloWidth: 2,
-            zIndex: 1,
-          ),
-        );
-      } catch (e) {
-        print('Lỗi khi vẽ label huyện: $e');
-      }
-    }
-  }
-
-  if (isBorderVisible && isBorderLoaded) {
-    await _mapUtils.drawPolygonsOnMap(borderPolygons);
     await _mapUtils.toggleBorderVisibility(isBorderVisible);
-  }
-
-  if (isCommunesVisible && isCommunesLoaded) {
-    await _mapUtils.drawCommunesOnMap(communes);
     await _mapUtils.toggleCommunesVisibility(isCommunesVisible);
-    for (var commune in communes) {
-      try {
-        LatLng center = _calculatePolygonCenter(commune.polygons);
-        await mapController.addSymbol(
-          SymbolOptions(
-            geometry: center,
-            textField: commune.name,
-            textOffset: const Offset(0, 0.8),
-            textAnchor: 'top',
-            textSize: 10,
-            textColor: '#000000',
-            textHaloColor: '#FFFFFF',
-            textHaloWidth: 1,
-            zIndex: 2,
-          ),
-        );
-      } catch (e) {
-        print('Lỗi khi vẽ label xã: $e');
-      }
-    }
-  }
-
-  // Thêm các icon cho các loại điểm
-  for (String icon in ['landslide_0', 'landslide_1', 'landslide_2', 'landslide_3', 'landslide_4', 'landslide_5']) {
-    try {
-      ByteData bytes = await rootBundle.load('lib/assets/map/$icon.png');
-      Uint8List list = bytes.buffer.asUint8List();
-      await mapController.addImage(icon, list);
-    } catch (e) {
-      print('Lỗi khi tải icon $icon: $e');
-    }
-  }
-
-  if (isLandslidePointsVisible && isLandslidePointsLoaded) {
-    await _mapUtils.clearLandslidePointsOnMap();
-    await _mapUtils.drawLandslidePointsOnMap(landslidePoints);
     await _mapUtils.toggleLandslidePointsVisibility(isLandslidePointsVisible);
+
+    if (currentLocation != null) {
+      await _mapUtils.updateLocationOnMap(currentLocation!);
+    }
   }
 
-  // Vẽ các điểm dự báo theo giờ sau cùng để hiển thị trên cùng
-  if (_hourlyForecastPoints.isNotEmpty) {
-    await _mapUtils.clearHourlyForecastPoints();
-    await _mapUtils.drawHourlyForecastPoints(_hourlyForecastPoints);
-  }
-
-  // Hiển thị vị trí hiện tại
-  if (currentLocation != null) {
-    await _mapUtils.updateLocationOnMap(currentLocation!);
-  }
-
-  // Đảm bảo các điểm luôn hiển thị trên cùng
-  await _mapUtils.ensureLandslidePointsOnTop();
-}
-
-  // Symbol Management
+  // Phương thức xử lý khi người dùng nhấn vào biểu tượng trên bản đồ
   void onSymbolTapped(Symbol symbol) async {
     if (symbol.data != null && symbol.data!['id'] != null) {
       int landslideId = symbol.data!['id'];
@@ -342,6 +235,322 @@ void onStyleLoaded() async {
           await database.landslideDatabase.fetchLandslideDetail(landslideId);
       showLandslideDetailDialog(landslideDetail);
     }
+  }
+
+  double _calculateDistance(LatLng start, LatLng end) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a = 0.5 -
+        c((end.latitude - start.latitude) * p) / 2 +
+        c(start.latitude * p) *
+            c(end.latitude * p) *
+            (1 - c((end.longitude - start.longitude) * p)) /
+            2;
+    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+  }
+
+  double calculateDistance(LatLng start, LatLng end) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a = 0.5 -
+        c((end.latitude - start.latitude) * p) / 2 +
+        c(start.latitude * p) *
+            c(end.latitude * p) *
+            (1 - c((end.longitude - start.longitude) * p)) /
+            2;
+    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+  }
+
+  String convertToDMS(double coordinate, bool isLatitude) {
+    String direction = isLatitude
+        ? (coordinate >= 0 ? "N" : "S")
+        : (coordinate >= 0 ? "E" : "W");
+
+    coordinate = coordinate.abs();
+    int degrees = coordinate.floor();
+    double minutesDecimal = (coordinate - degrees) * 60;
+    int minutes = minutesDecimal.floor();
+    double seconds = (minutesDecimal - minutes) * 60;
+
+    return "${degrees.toString().padLeft(3, '0')}° ${minutes.toString().padLeft(2, '0')}' ${seconds.toStringAsFixed(2).padLeft(5, '0')}\" $direction";
+  }
+
+  // Phương thức hiển thị hộp thoại chi tiết điểm trượt lở
+  void showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
+    LatLng landslideLocation;
+    try {
+      landslideLocation = LatLng(
+          double.parse(landslideDetail['lat'].toString()),
+          double.parse(landslideDetail['lon'].toString()));
+    } catch (e) {
+      print('Error parsing coordinates: $e');
+      showErrorSnackBar('Lỗi khi xử lý tọa độ điểm trượt lở.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Thông tin điểm trượt lở'),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  Text('Vị trí: ${landslideDetail['vi_tri']}'),
+                  Text(
+                      'Xã: ${landslideDetail['commune_name'] ?? landslideDetail['ten_xa'] ?? 'Không có thông tin'}'),
+                  Text(
+                      'Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
+                  Text('Mô tả: ${landslideDetail['mo_ta']}'),
+                  Text(
+                    'Tọa độ: Kinh độ ${convertToDMS(landslideDetail['lon'], false)}, Vĩ độ ${convertToDMS(landslideDetail['lat'], true)}',
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    child: const Text('Khoảng cách theo đường chim bay'),
+                    onPressed: () {
+                      if (currentLocation != null) {
+                        double distance = _calculateDistance(
+                            currentLocation!, landslideLocation);
+                        setState(() {
+                          landslideDetail['distance'] = distance;
+                        });
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Không thể xác định vị trí hiện tại')),
+                        );
+                      }
+                    },
+                  ),
+                  if (landslideDetail.containsKey('distance'))
+                    Center(
+                      child: Text(
+                          'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(2)} km'),
+                    ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    child: const Text('Tìm đường trực tiếp'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _findRoute(landslideLocation, landslideDetail['id']);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.map),
+                    label: const Text('Mở trong Google Maps'),
+                    onPressed: () => _openGoogleMaps(landslideLocation),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Hình ảnh:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  if (landslideDetail['images'] != null &&
+                      (landslideDetail['images'] as List).isNotEmpty)
+                    Column(
+                      children:
+                          (landslideDetail['images'] as List).map((image) {
+                        String imageUrl =
+                            'http://truotlobinhdinh.girc.edu.vn/storage/$image';
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Image.network(
+                            imageUrl,
+                            loadingBuilder: (BuildContext context, Widget child,
+                                ImageChunkEvent? loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Text('Không thể tải hình ảnh');
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    )
+                  else
+                    const Text('Không có hình ảnh'),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Đóng'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  void _findRoute(LatLng destination, int destinationId) async {
+    if (currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isRouteDisplayed = true;
+      _currentRouteId = destinationId;
+      _currentSearchId = destinationId;
+    });
+
+    _showSearchingSnackBar(destinationId);
+
+    try {
+      List<LatLng> routeCoordinates = await _mapUtils.getRouteCoordinates(
+        currentLocation!,
+        destination,
+        mapToken,
+      );
+
+      if (_currentSearchId != destinationId) {
+        // Tìm kiếm đã bị hủy
+        return;
+      }
+
+      await _mapUtils.drawRouteOnMap(routeCoordinates);
+
+      LatLngBounds bounds = _calculateBounds(routeCoordinates);
+
+      mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds));
+
+      setState(() {
+        _isRouteDisplayed = true;
+        _currentRouteId = destinationId;
+      });
+    } catch (e) {
+      print('Error finding route: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _currentSearchId = null;
+        });
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    }
+  }
+
+  void _openGoogleMaps(LatLng destination) async {
+    if (currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
+      );
+      return;
+    }
+
+    final url =
+        'https://www.google.com/maps/dir/?api=1&origin=${currentLocation!.latitude},${currentLocation!.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
+
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Không thể mở Google Maps. Vui lòng cài đặt ứng dụng Google Maps.')),
+      );
+    }
+  }
+
+  void _cancelRouteDisplay() {
+    _mapUtils.clearRoute();
+    setState(() {
+      _isRouteDisplayed = false;
+      _currentRouteId = null;
+    });
+  }
+
+  Widget buildRouteInfo() {
+    if (!_isRouteDisplayed) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 16,
+      left: 16,
+      right: 16,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text('Đường đi tới ($_currentRouteId)'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _cancelRouteDisplay,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSearchingSnackBar(int destinationId) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Text('Đang tìm đường đến ($destinationId)'),
+          ],
+        ),
+        duration: const Duration(days: 365), // Snackbar sẽ không tự động đóng
+        action: SnackBarAction(
+          label: 'Hủy',
+          onPressed: () {
+            setState(() {
+              _currentSearchId = null;
+            });
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            _mapUtils.clearRoute();
+          },
+        ),
+      ),
+    );
+  }
+
+  LatLngBounds _calculateBounds(List<LatLng> coordinates) {
+    double minLat = coordinates[0].latitude;
+    double maxLat = coordinates[0].latitude;
+    double minLng = coordinates[0].longitude;
+    double maxLng = coordinates[0].longitude;
+
+    for (LatLng coord in coordinates) {
+      if (coord.latitude < minLat) minLat = coord.latitude;
+      if (coord.latitude > maxLat) maxLat = coord.latitude;
+      if (coord.longitude < minLng) minLng = coord.longitude;
+      if (coord.longitude > maxLng) maxLng = coord.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
   }
 
   Future<void> _drawDistrictLabels() async {
@@ -354,10 +563,10 @@ void onStyleLoaded() async {
           textField: district.name,
           textOffset: const Offset(0, 0.8),
           textAnchor: 'top',
-          textSize: 16,
+          textSize: 16, // Tăng kích thước chữ
           textColor: '#000000',
-          textHaloColor: '#FFFFFF',
-          textHaloWidth: 2,
+          textHaloColor: '#FFFFFF', // Thêm viền trắng xung quanh chữ
+          textHaloWidth: 2, // Độ rộng của viền
         ),
       );
       _districtLabels.add(symbol);
@@ -383,8 +592,6 @@ void onStyleLoaded() async {
           textAnchor: 'top',
           textSize: 10,
           textColor: '#000000',
-          textHaloColor: '#FFFFFF',
-          textHaloWidth: 1,
         ),
       );
       _communeLabels.add(symbol);
@@ -398,16 +605,22 @@ void onStyleLoaded() async {
     _communeLabels.clear();
   }
 
-  // Visibility Controls
-  void toggleDistrictVisibility(int districtId, bool? value) async {
-    if (value != null) {
-      setState(() {
-        districtVisibility[districtId] = value;
-      });
-      await _mapUtils.toggleDistrictVisibility(districtId, value);
+  LatLng _calculatePolygonCenter(List<List<LatLng>> polygons) {
+    double sumLat = 0, sumLng = 0;
+    int totalPoints = 0;
+
+    for (var polygon in polygons) {
+      for (var point in polygon) {
+        sumLat += point.latitude;
+        sumLng += point.longitude;
+        totalPoints++;
+      }
     }
+
+    return LatLng(sumLat / totalPoints, sumLng / totalPoints);
   }
 
+  // Phương thức chuyển đổi hiển thị các huyện
   void toggleDistrictsVisibility(bool? value) async {
     if (value != null) {
       setState(() {
@@ -427,6 +640,7 @@ void onStyleLoaded() async {
     }
   }
 
+  // Phương thức chuyển đổi hiển thị đường biên
   void toggleBorderVisibility(bool? value) async {
     if (value != null) {
       setState(() {
@@ -440,6 +654,7 @@ void onStyleLoaded() async {
     }
   }
 
+// Phương thức chuyển đổi hiển thị các xã
   void toggleCommunesVisibility(bool? value) async {
     if (value != null) {
       setState(() {
@@ -459,6 +674,7 @@ void onStyleLoaded() async {
     }
   }
 
+  // Phương thức chuyển đổi hiển thị các điểm trượt lở
   void toggleLandslidePointsVisibility(bool? value) async {
     if (value != null) {
       setState(() {
@@ -472,339 +688,82 @@ void onStyleLoaded() async {
     }
   }
 
-  void toggleDistrictLandslideVisibility(String district, bool? value) {
+  // Phương thức chuyển đổi hiển thị một huyện cụ thể
+  void toggleDistrictVisibility(int districtId, bool? value) async {
     if (value != null) {
       setState(() {
-        districtLandslideVisibility[district] = value;
+        districtVisibility[districtId] = value;
       });
-      _updateLandslidePointsVisibility();
+      await _mapUtils.toggleDistrictVisibility(districtId, value);
     }
   }
 
-  void _updateLandslidePointsVisibility() {
-    if (_isMapInitialized) {
-      _mapUtils.updateLandslidePointsVisibility(
-        landslidePoints, 
-        districtLandslideVisibility
-      );
-    }
-  }
-
-  // Navigation and Route Methods
-  void _findRoute(LatLng destination, int destinationId) async {
-    if (currentLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể xác định vị trí hiện tại')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isRouteDisplayed = true;
-      _currentRouteId = destinationId;
-      _currentSearchId = destinationId;
-    });
-
-    _showSearchingSnackBar(destinationId);
-
-    try {
-      List<LatLng> routeCoordinates = await _mapUtils.getRouteCoordinates(
-        currentLocation!,
-        destination,
-        mapToken,
-      );
-
-      if (_currentSearchId != destinationId) {
-        return;
-      }
-
-      await _mapUtils.drawRouteOnMap(routeCoordinates);
-      LatLngBounds bounds = _calculateBounds(routeCoordinates);
-      mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds));
-
+  // Phương thức thay đổi style bản đồ
+  void changeMapStyle(String? style) {
+    if (style != null) {
       setState(() {
-        _isRouteDisplayed = true;
-        _currentRouteId = destinationId;
+        currentStyle = style;
       });
-    } catch (e) {
-      print('Error finding route: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể tìm đường đi. Vui lòng thử lại sau.')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _currentSearchId = null;
+      // Vẽ lại các điểm trượt lở sau khi thay đổi style
+      if (isLandslidePointsVisible && isLandslidePointsLoaded) {
+        _mapUtils.clearLandslidePointsOnMap().then((_) {
+          _mapUtils.drawLandslidePointsOnMap(landslidePoints);
         });
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
+      Navigator.pop(context);
     }
   }
 
-  void _cancelRouteDisplay() {
-    _mapUtils.clearRoute();
-    setState(() {
-      _isRouteDisplayed = false;
-      _currentRouteId = null;
-    });
-  }
-
-  void _showSearchingSnackBar(int destinationId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 16),
-            Text('Đang tìm đường đến điểm ($destinationId)'),
-          ],
-        ),
-        duration: const Duration(days: 365),
-        action: SnackBarAction(
-          label: 'Hủy',
-          onPressed: () {
-            setState(() {
-              _currentSearchId = null;
-            });
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            _mapUtils.clearRoute();
-          },
-        ),
-      ),
-    );
-  }
-
-  // Location Services
-  void initializeLocationService() async {
-    bool permissionGranted = await locationService.checkAndRequestLocationPermission(context);
-    if (permissionGranted) {
-      locationService.startLocationUpdates(
-        (location) {
-          setState(() {
-            currentLocation = location;
-          });
-          if (_isMapInitialized) {
-            _mapUtils.updateLocationOnMap(location);
-          }
-        },
-        handleLocationError
-      );
-    }
-  }
-
-  void handleLocationError(dynamic e) {
-    String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
-    print(errorMessage);
-    showErrorSnackBar(errorMessage);
-  }
-
-  // Map Navigation Controls
+  // Phương thức di chuyển đến vị trí hiện tại
   void moveToCurrentLocation() {
     if (currentLocation != null) {
       mapController.animateCamera(CameraUpdate.newLatLng(currentLocation!));
     }
   }
 
+  // Phương thức di chuyển đến vị trí mặc định
   void moveToDefaultLocation() {
-    mapController.animateCamera(
-      CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom)
-    );
+    mapController
+        .animateCamera(CameraUpdate.newLatLngZoom(defaultTarget, defaultZoom));
   }
 
-  // Style Management
-  void changeMapStyle(String? style) {
-    if (style != null) {
-      setState(() {
-        currentStyle = style;
-      });
-      if (isLandslidePointsVisible && isLandslidePointsLoaded) {
-        _mapUtils.clearLandslidePointsOnMap().then((_) {
-          _mapUtils.drawLandslidePointsOnMap(landslidePoints);
+  // Phương thức khởi tạo dịch vụ vị trí
+  void initializeLocationService() async {
+    bool permissionGranted =
+        await locationService.checkAndRequestLocationPermission(context);
+    if (permissionGranted) {
+      locationService.startLocationUpdates((location) {
+        setState(() {
+          currentLocation = location;
         });
-      }
+        if (_isMapInitialized) {
+          _mapUtils.updateLocationOnMap(location);
+        }
+      }, handleLocationError);
     }
   }
 
-  // Utility Methods
-  LatLng _calculatePolygonCenter(List<List<LatLng>> polygons) {
-    double sumLat = 0, sumLng = 0;
-    int totalPoints = 0;
-
-    for (var polygon in polygons) {
-      for (var point in polygon) {
-        sumLat += point.latitude;
-        sumLng += point.longitude;
-        totalPoints++;
-      }
-    }
-
-    return LatLng(sumLat / totalPoints, sumLng / totalPoints);
+  // Phương thức xử lý lỗi vị trí
+  void handleLocationError(dynamic e) {
+    String errorMessage = 'Đã xảy ra lỗi khi lấy vị trí: $e';
+    print(errorMessage);
+    showErrorSnackBar(errorMessage);
   }
 
-  LatLngBounds _calculateBounds(List<LatLng> coordinates) {
-    double minLat = coordinates[0].latitude;
-    double maxLat = coordinates[0].latitude;
-    double minLng = coordinates[0].longitude;
-    double maxLng = coordinates[0].longitude;
-
-    for (LatLng coord in coordinates) {
-      if (coord.latitude < minLat) minLat = coord.latitude;
-      if (coord.latitude > maxLat) maxLat = coord.latitude;
-      if (coord.longitude < minLng) minLng = coord.longitude;
-      if (coord.longitude > maxLng) maxLng = coord.longitude;
-    }
-
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
-  }
-
-  double calculateDistance(LatLng start, LatLng end) {
-    var p = 0.017453292519943295;
-    var c = cos;
-    var a = 0.5 -
-        c((end.latitude - start.latitude) * p) / 2 +
-        c(start.latitude * p) *
-            c(end.latitude * p) *
-            (1 - c((end.longitude - start.longitude) * p)) /
-            2;
-    return 12742 * asin(sqrt(a));
-  }
-
-  String convertToDMS(double coordinate, bool isLatitude) {
-    String direction = isLatitude
-        ? (coordinate >= 0 ? "N" : "S")
-        : (coordinate >= 0 ? "E" : "W");
-
-    coordinate = coordinate.abs();
-    int degrees = coordinate.floor();
-    double minutesDecimal = (coordinate - degrees) * 60;
-    int minutes = minutesDecimal.floor();
-    double seconds = (minutesDecimal - minutes) * 60;
-
-    return "${degrees.toString().padLeft(3, '0')}° "
-        "${minutes.toString().padLeft(2, '0')}' "
-        "${seconds.toStringAsFixed(2).padLeft(5, '0')}\" "
-        "$direction";
-  }
-
-  // Dialog and Error Handling
-  void showLandslideDetailDialog(Map<String, dynamic> landslideDetail) {
-    LatLng landslideLocation;
-    try {
-      landslideLocation = LatLng(
-        double.parse(landslideDetail['lat'].toString()),
-        double.parse(landslideDetail['lon'].toString())
-      );
-    } catch (e) {
-      print('Error parsing coordinates: $e');
-      showErrorSnackBar('Lỗi khi xử lý tọa độ điểm trượt lở.');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Thông tin điểm trượt lở'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    Text('Vị trí: ${landslideDetail['vi_tri']}'),
-                    Text('Xã: ${landslideDetail['commune_name'] ?? landslideDetail['ten_xa'] ?? 'Không có thông tin'}'),
-                    Text('Huyện: ${landslideDetail['district_name'] ?? 'Không có thông tin'}'),
-                    Text('Mô tả: ${landslideDetail['mo_ta']}'),
-                    Text(
-                      'Tọa độ: ${convertToDMS(landslideLocation.longitude, false)}, '
-                      '${convertToDMS(landslideLocation.latitude, true)}',
-                    ),
-                    const SizedBox(height: 20),
-                    if (currentLocation != null) ...[
-                      ElevatedButton(
-                        child: const Text('Tính khoảng cách'),
-                        onPressed: () {
-                          double distance = calculateDistance(
-                            currentLocation!,
-                            landslideLocation
-                          );
-                          setState(() {
-                            landslideDetail['distance'] = distance;
-                          });
-                        },
-                      ),
-                      if (landslideDetail.containsKey('distance'))
-                        Text(
-                          'Khoảng cách: ${landslideDetail['distance'].toStringAsFixed(2)} km'
-                        ),
-                    ],
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      child: const Text('Tìm đường'),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _findRoute(landslideLocation, landslideDetail['id']);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('Đóng'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
+  // Phương thức hiển thị thông báo lỗi
   void showErrorSnackBar(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message))
-      );
+      // Kiểm tra xem widget còn được mount hay không
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } else {
+      // Xử lý trường hợp widget đã bị unmount
+      print('Không thể hiển thị SnackBar: $message');
     }
   }
 
-  // Route Information Widget
-  Widget buildRouteInfo() {
-    if (!_isRouteDisplayed) return const SizedBox.shrink();
-
-    return Positioned(
-      top: 16,
-      left: 16,
-      right: 16,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text('Đường đi tới điểm ($_currentRouteId)'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _cancelRouteDisplay,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Lifecycle Methods
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     locationService.stopLocationUpdates();
     mapController.onSymbolTapped.remove(onSymbolTapped);
     super.dispose();

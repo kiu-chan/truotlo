@@ -1,13 +1,10 @@
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-
 import 'package:truotlo/src/data/map/district_data.dart';
 import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/database/commune.dart';
-import 'package:truotlo/src/page/home/elements/landslide/hourly_forecast_point.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MapUtils {
   final MapboxMapController _mapController;
@@ -18,7 +15,6 @@ class MapUtils {
   final List<Line> _drawnPolygons = [];
   final List<Line> _drawnCommunes = [];
   final List<Symbol> _drawnLandslidePoints = [];
-  final Map<String, Symbol> _hourlyForecastSymbols = {};
   Symbol? _originalMarker;
 
   MapUtils(this._mapController);
@@ -59,7 +55,7 @@ class MapUtils {
         Line line = await _mapController.addLine(
           LineOptions(
             geometry: polygon,
-            lineColor: '#000000',
+            lineColor: '#00000', // Red color for district boundaries
             lineWidth: 2.0,
             lineOpacity: 1.0,
           ),
@@ -69,7 +65,7 @@ class MapUtils {
         print('Lỗi khi vẽ ranh giới huyện ${district.name}: $e');
       }
     }
-    _drawnDistricts[district.id] = lines;
+    _drawnDistricts[district.id] = lines.cast<Line>();
   }
 
   Future<void> toggleDistrictVisibility(int districtId, bool isVisible) async {
@@ -77,9 +73,7 @@ class MapUtils {
       for (var line in _drawnDistricts[districtId]!) {
         try {
           await _mapController.updateLine(
-            line, 
-            LineOptions(lineOpacity: isVisible ? 1.0 : 0.0)
-          );
+              line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của huyện $districtId: $e');
         }
@@ -92,14 +86,25 @@ class MapUtils {
       for (var line in lines) {
         try {
           await _mapController.updateLine(
-            line, 
-            LineOptions(lineOpacity: isVisible ? 1.0 : 0.0)
-          );
+              line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
         } catch (e) {
           print('Lỗi khi chuyển đổi tính hiển thị của tất cả các huyện: $e');
         }
       }
     }
+  }
+
+  Future<void> clearDistrictsOnMap() async {
+    for (var lines in _drawnDistricts.values) {
+      for (var line in lines) {
+        try {
+          await _mapController.removeLine(line);
+        } catch (e) {
+          print('Lỗi khi xóa đường ranh giới của huyện: $e');
+        }
+      }
+    }
+    _drawnDistricts.clear();
   }
 
   Future<void> drawPolygonsOnMap(List<List<LatLng>> polygons) async {
@@ -110,8 +115,8 @@ class MapUtils {
         Line line = await _mapController.addLine(
           LineOptions(
             geometry: polygon,
-            lineColor: "#FF1493", // Deep Pink color for borders
-            lineWidth: 3.0,
+            lineColor: "#FF0000",
+            lineWidth: 2.0,
             lineOpacity: 1.0,
           ),
         );
@@ -134,15 +139,17 @@ class MapUtils {
   }
 
   Future<void> toggleBorderVisibility(bool isVisible) async {
-    for (var line in _drawnPolygons) {
-      try {
-        await _mapController.updateLine(
-          line, 
-          LineOptions(lineOpacity: isVisible ? 1.0 : 0.0)
-        );
-      } catch (e) {
-        print('Lỗi khi chuyển đổi tính hiển thị của đường biên: $e');
+    try {
+      for (var line in _drawnPolygons) {
+        try {
+          await _mapController.updateLine(
+              line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
+        } catch (e) {
+          print('Lỗi khi chuyển đổi tính hiển thị của đường biên: $e');
+        }
       }
+    } catch (e) {
+      print('lỗi: $e');
     }
   }
 
@@ -155,10 +162,9 @@ class MapUtils {
           Line line = await _mapController.addLine(
             LineOptions(
               geometry: polygon,
-              lineColor: "#808080", // Gray color for communes
+              lineColor: "#000000",
               lineWidth: 1.0,
               lineOpacity: 1.0,
-              linePattern: "dash",
             ),
           );
           _drawnCommunes.add(line);
@@ -184,224 +190,10 @@ class MapUtils {
     for (var line in _drawnCommunes) {
       try {
         await _mapController.updateLine(
-          line, 
-          LineOptions(lineOpacity: isVisible ? 1.0 : 0.0)
-        );
+            line, LineOptions(lineOpacity: isVisible ? 1.0 : 0.0));
       } catch (e) {
         print('Lỗi khi chuyển đổi tính hiển thị của xã: $e');
       }
-    }
-  }
-
-Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
-  await clearLandslidePointsOnMap();
-
-  for (var point in points) {
-    try {
-      Symbol symbol = await _mapController.addSymbol(
-        SymbolOptions(
-          geometry: point.location,
-          iconImage: 'landslide_0',
-          iconSize: 0.15,
-          iconColor: '#808080', // Màu xám cho các điểm cũ
-          zIndex: 90, // zIndex thấp hơn các điểm dự báo
-          iconOpacity: 0.7, // Độ trong suốt cao hơn
-        ),
-        {
-          'id': point.id,
-          'district': point.district,
-          'isLandslide': true,
-        },
-      );
-      _drawnLandslidePoints.add(symbol);
-    } catch (e) {
-      print('Error drawing landslide point: $e');
-    }
-  }
-}
-
-  Future<void> clearLandslidePointsOnMap() async {
-    for (var symbol in _drawnLandslidePoints) {
-      try {
-        await _mapController.removeSymbol(symbol);
-      } catch (e) {
-        print('Error removing landslide point: $e');
-      }
-    }
-    _drawnLandslidePoints.clear();
-  }
-
-  Future<void> toggleLandslidePointsVisibility(bool isVisible) async {
-    for (var symbol in _drawnLandslidePoints) {
-      try {
-        await _mapController.updateSymbol(
-          symbol,
-          SymbolOptions(iconOpacity: isVisible ? 1.0 : 0.0)
-        );
-      } catch (e) {
-        print('Error toggling landslide point visibility: $e');
-      }
-    }
-  }
-
-  Future<void> clearHourlyForecastPoints() async {
-    for (var symbol in _hourlyForecastSymbols.values) {
-      try {
-        await _mapController.removeSymbol(symbol);
-      } catch (e) {
-        print('Error removing hourly forecast point: $e');
-      }
-    }
-    _hourlyForecastSymbols.clear();
-  }
-
-Future<void> drawHourlyForecastPoints(List<HourlyForecastPoint> points) async {
-  await clearHourlyForecastPoints();
-
-  for (var point in points) {
-    try {
-      String riskLevel = _determineRiskLevel(point);
-      String iconImage = _getRiskLevelIcon(riskLevel);
-      
-      // Tạo hiệu ứng đổ bóng cho điểm dự báo
-      await _mapController.addCircle(
-        CircleOptions(
-          geometry: LatLng(
-            double.parse(point.viDo),
-            double.parse(point.kinhDo),
-          ),
-          circleRadius: 12.0,
-          circleColor: '#FFFFFF',
-          circleOpacity: 0.3,
-          circleStrokeWidth: 2,
-          circleStrokeColor: '#000000',
-          circleStrokeOpacity: 0.2,
-        ),
-      );
-      
-      Symbol symbol = await _mapController.addSymbol(
-        SymbolOptions(
-          geometry: LatLng(
-            double.parse(point.viDo),
-            double.parse(point.kinhDo),
-          ),
-          iconImage: iconImage,
-          iconSize: 0.25, // Tăng kích thước biểu tượng
-          iconColor: _getRiskColor(riskLevel),
-          zIndex: 150, // Tăng zIndex để luôn hiển thị trên cùng
-          iconAnchor: 'bottom',
-          textField: '${point.viTri}\n${_getRiskText(point)}',
-          textSize: 12,
-          textOffset: const Offset(0, 0.8),
-          textAnchor: 'top',
-          textColor: '#000000',
-          textHaloColor: '#FFFFFF',
-          textHaloWidth: 2,
-          textHaloBlur: 1,
-        ),
-        {
-          'id': point.id,
-          'district': point.huyen,
-          'isHourly': true,
-          'data': point.toJson(),
-        },
-      );
-
-      _hourlyForecastSymbols[point.id.toString()] = symbol;
-      
-      // Thêm hiệu ứng nhấp nháy (pulse effect)
-      if (_getRiskValue(riskLevel) >= 4) { // Chỉ áp dụng cho mức độ cao và rất cao
-        _addPulseEffect(
-          LatLng(double.parse(point.viDo), double.parse(point.kinhDo)),
-          _getRiskColor(riskLevel),
-        );
-      }
-    } catch (e) {
-      print('Error drawing hourly forecast point: $e');
-    }
-  }
-}
-
-String _getRiskColor(String riskLevel) {
-  switch (riskLevel) {
-    case 'very_high':
-      return '#FF0000'; // Đỏ
-    case 'high':
-      return '#FF4500'; // Đỏ cam
-    case 'medium':
-      return '#FFA500'; // Cam
-    case 'low':
-      return '#FFFF00'; // Vàng
-    case 'very_low':
-      return '#90EE90'; // Xanh nhạt
-    default:
-      return '#008000'; // Xanh lá
-  }
-}
-
-int _getRiskValue(String riskLevel) {
-  switch (riskLevel) {
-    case 'very_high':
-      return 5;
-    case 'high':
-      return 4;
-    case 'medium':
-      return 3;
-    case 'low':
-      return 2;
-    case 'very_low':
-      return 1;
-    default:
-      return 0;
-  }
-}
-
-Future<void> _addPulseEffect(LatLng location, String color) async {
-  for (var i = 0; i < 3; i++) { // 3 vòng tròn cho hiệu ứng pulse
-    await _mapController.addCircle(
-      CircleOptions(
-        geometry: location,
-        circleRadius: 15.0 + (i * 5), // Kích thước tăng dần
-        circleColor: color,
-        circleOpacity: 0.3 - (i * 0.1), // Độ trong suốt tăng dần
-        circleBlur: 1,
-      ),
-    );
-  }
-}
-
-  String _getRiskText(HourlyForecastPoint point) {
-    return 'LQ: ${point.nguyCoLuQuet}, TN: ${point.nguyCoTruotNong}, TL: ${point.nguyCoTruotLon}';
-  }
-
-  String _determineRiskLevel(HourlyForecastPoint point) {
-    double luQuet = double.parse(point.nguyCoLuQuet);
-    double truotNong = double.parse(point.nguyCoTruotNong);
-    double truotLon = double.parse(point.nguyCoTruotLon);
-    
-    double maxRisk = [luQuet, truotNong, truotLon].reduce((max, value) => value > max ? value : max);
-    
-    if (maxRisk >= 5.0) return 'very_high';
-    if (maxRisk >= 4.0) return 'high';
-    if (maxRisk >= 3.0) return 'medium';
-    if (maxRisk >= 2.0) return 'low';
-    return 'very_low';
-  }
-
-  String _getRiskLevelIcon(String riskLevel) {
-    switch (riskLevel) {
-      case 'very_high':
-        return 'landslide_5';
-      case 'high':
-        return 'landslide_4';
-      case 'medium':
-        return 'landslide_3';
-      case 'low':
-        return 'landslide_2';
-      case 'very_low':
-        return 'landslide_1';
-      default:
-        return 'landslide_0';
     }
   }
 
@@ -424,34 +216,157 @@ Future<void> _addPulseEffect(LatLng location, String color) async {
         print('Error updating landslide point visibility: $e');
       }
     }
+  }
 
-    // Also update hourly forecast points visibility
-    for (var symbol in _hourlyForecastSymbols.values) {
-      try {
-        final pointData = symbol.data;
-        if (pointData != null && pointData['district'] != null) {
-          final district = pointData['district'] as String;
-          final isVisible = districtVisibility[district] ?? true;
-          await _mapController.updateSymbol(
-            symbol,
-            SymbolOptions(iconOpacity: isVisible ? 1.0 : 0.0),
-          );
+  Future<void> drawLandslidePointsOnMap(List<LandslidePoint> points) async {
+    await clearLandslidePointsOnMap();
+
+    // Tải trước tất cả các icon cảnh báo
+    for (int i = 0; i <= 5; i++) {
+      final ByteData bytes = await rootBundle.load('lib/assets/map/landslide_$i.png');
+      final Uint8List list = bytes.buffer.asUint8List();
+      await _mapController.addImage("landslide_$i", list);
+    }
+
+    try {
+      // Lấy dữ liệu từ API forecast-points
+      final forecastResponse = await http.get(
+        Uri.parse('http://truotlobinhdinh.girc.edu.vn/api/forecast-points')
+      );
+
+      Map<String, dynamic>? forecastData;
+      List<dynamic>? currentForecasts;
+
+      if (forecastResponse.statusCode == 200) {
+        forecastData = json.decode(forecastResponse.body);
+        // Lấy dữ liệu của thời điểm mới nhất (key đầu tiên trong data)
+        String latestTimestamp = forecastData!['data'].keys.first;
+        currentForecasts = forecastData['data'][latestTimestamp];
+        
+        // In ra tất cả ten_diem từ forecast
+        print('\n=== Danh sách tất cả ten_diem từ forecast ===');
+        for (var forecast in currentForecasts!) {
+          String tenDiem = forecast['ten_diem'].toString();
+          String tenDiemCleaned = tenDiem.replaceAll('"', '');
+          print('ten_diem gốc: $tenDiem -> sau khi xử lý: $tenDiemCleaned');
         }
+        print('==========================================\n');
+      }
+
+      for (var point in points) {
+        String iconImage = 'landslide_0'; // Mặc định icon 0
+        print('\nĐang xử lý điểm: ');
+        print('id: ${point.id}');
+        print('object_id: ${point.objectId}');
+        
+        // Nếu có dữ liệu dự báo, tìm điểm tương ứng
+        if (currentForecasts != null) {
+          var matchingForecast = currentForecasts.firstWhere(
+            (forecast) {
+              String tenDiem = forecast['ten_diem'].toString().replaceAll('"', '');
+              String objectId = point.objectId.toString();
+              bool isMatch = tenDiem == objectId;
+              
+              print('So sánh: ten_diem = $tenDiem với object_id = $objectId -> ${isMatch ? 'KHỚP' : 'KHÔNG KHỚP'}');
+              
+              return isMatch;
+            },
+            orElse: () => null
+          );
+
+          if (matchingForecast != null) {
+            // Lấy giá trị nguy_co_truot_nong để xác định icon
+            String nguyCo = matchingForecast['nguy_co_truot_nong'].toString();
+            print('Tìm thấy điểm khớp! nguy_co_truot_nong = $nguyCo');
+            
+            try {
+              double value = double.parse(nguyCo);
+              String oldIcon = iconImage;
+              if (value >= 5) {
+                iconImage = 'landslide_5';
+              } else if (value >= 4) {
+                iconImage = 'landslide_4';
+              } else if (value >= 3) {
+                iconImage = 'landslide_3';
+              } else if (value >= 2) {
+                iconImage = 'landslide_2';
+              } else if (value >= 1) {
+                iconImage = 'landslide_1';
+              }
+              print('Chuyển icon từ $oldIcon -> $iconImage (giá trị nguy cơ: $value)');
+            } catch (e) {
+              print('Lỗi khi parse nguy_co_truot_nong: $e');
+            }
+          } else {
+            print('Không tìm thấy điểm khớp -> sử dụng icon mặc định landslide_0');
+          }
+        }
+
+        // Thêm điểm vào bản đồ với icon tương ứng
+        Symbol symbol = await _mapController.addSymbol(
+          SymbolOptions(
+            geometry: point.location,
+            iconImage: iconImage,
+            iconSize: 0.15,
+            zIndex: 99,
+          ),
+          {
+            'id': point.id,
+            'district': point.district,
+            'object_id': point.objectId,
+          },
+        );
+        _drawnLandslidePoints.add(symbol);
+      }
+    } catch (e) {
+      print('Lỗi khi vẽ điểm trượt lở: $e');
+    }
+  }
+
+// Thêm phương thức này vào lớp MapUtils
+Future<Uint8List> _loadImageFromAsset(String assetName) async {
+  final ByteData data = await rootBundle.load(assetName);
+  return data.buffer.asUint8List();
+}
+
+  Future<void> ensureLandslidePointsOnTop() async {
+    for (var symbol in _drawnLandslidePoints) {
+      try {
+        await _mapController.updateSymbol(
+          symbol,
+          const SymbolOptions(zIndex: 99),
+        );
       } catch (e) {
-        print('Error updating hourly forecast point visibility: $e');
+        print('Error updating landslide point zIndex: $e');
       }
     }
   }
 
-  Future<List<LatLng>> getRouteCoordinates(
-    LatLng start, 
-    LatLng end,
-    String accessToken
-  ) async {
-    final url = 'https://api.mapbox.com/directions/v5/mapbox/driving/'
-        '${start.longitude},${start.latitude};'
-        '${end.longitude},${end.latitude}'
-        '?geometries=geojson&steps=true&overview=full&access_token=$accessToken';
+Future<void> clearLandslidePointsOnMap() async {
+  final symbolsToRemove = List<Symbol>.from(_drawnLandslidePoints);
+  for (var symbol in symbolsToRemove) {
+    try {
+      await _mapController.removeSymbol(symbol);
+    } catch (e) {
+      print('Error removing landslide point: $e');
+    }
+  }
+  _drawnLandslidePoints.clear();
+}
+
+  Future<void> toggleLandslidePointsVisibility(bool isVisible) async {
+    for (var symbol in _drawnLandslidePoints) {
+      try {
+        await _mapController.updateSymbol(
+            symbol, SymbolOptions(iconOpacity: isVisible ? 1.0 : 0.0));
+      } catch (e) {
+        print('Error toggling landslide point visibility: $e');
+      }
+    }
+  }
+
+  Future<List<LatLng>> getRouteCoordinates(LatLng start, LatLng end, String accessToken) async {
+    final String url = 'https://api.mapbox.com/directions/v5/mapbox/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?geometries=geojson&steps=true&overview=full&access_token=$accessToken';
 
     final response = await http.get(Uri.parse(url));
 
@@ -478,12 +393,12 @@ Future<void> _addPulseEffect(LatLng location, String color) async {
       ),
     );
   }
-
   Future<void> addDestinationMarker(LatLng destination) async {
     if (_destinationMarker != null) {
       await _mapController.removeSymbol(_destinationMarker!);
     }
     
+    // Lưu trạng thái icon ban đầu nếu có
     if (_originalMarker == null) {
       Set<Symbol> symbols = _mapController.symbols;
       if (symbols.isNotEmpty) {
@@ -491,20 +406,18 @@ Future<void> _addPulseEffect(LatLng location, String color) async {
       }
     }
 
+    // Thêm marker mới cho điểm đến
     _destinationMarker = await _mapController.addSymbol(
       SymbolOptions(
-geometry: destination,
-        iconImage: 'landslide_0',
+        geometry: destination,
+        iconImage: 'lib/assets/map/landslide_0.png',
         iconSize: 0.15,
-        zIndex: 100,
       ),
     );
 
+    // Ẩn marker ban đầu
     if (_originalMarker != null) {
-      await _mapController.updateSymbol(
-        _originalMarker!,
-        const SymbolOptions(iconOpacity: 0),
-      );
+      await _mapController.updateSymbol(_originalMarker!, const SymbolOptions(iconOpacity: 0));
     }
   }
 
@@ -513,199 +426,72 @@ geometry: destination,
       await _mapController.removeLine(_routeLine!);
       _routeLine = null;
     }
-
-    if (_destinationMarker != null) {
-      await _mapController.removeSymbol(_destinationMarker!);
-      _destinationMarker = null;
-    }
-
-    if (_originalMarker != null) {
-      await _mapController.updateSymbol(
-        _originalMarker!,
-        const SymbolOptions(iconOpacity: 1),
-      );
-    }
   }
+}
 
-  Future<void> clearAllPoints() async {
-    await clearLandslidePointsOnMap();
-    await clearHourlyForecastPoints();
-    await clearRoute();
-  }
-
-  Future<void> resetMap() async {
-    await clearAllPoints();
-    await clearPolygonsOnMap();
-    await clearCommunesOnMap();
+class LandslideWarningUtils {
+  /// Determines the appropriate warning level icon based on matching forecast and landslide points
+  /// Returns a number from 0-5 indicating which landslide_X.png icon to use
+  static int getWarningLevel(List<dynamic> forecastPoints, Map<String, dynamic> landslidePoint) {
+    // Extract the numeric part from object_id 
+    String objectId = landslidePoint['object_id'].toString();
     
-    for (var lines in _drawnDistricts.values) {
-      for (var line in lines) {
+    // Look for a matching forecast point
+    for (var forecast in forecastPoints) {
+      // Extract numeric part from ten_diem
+      String tenDiem = forecast['ten_diem'].toString();
+      
+      // If we find a match
+      if (objectId == tenDiem) {
+        // Get nguy_co_truot_nong value and convert to warning level
+        String nguyCo = forecast['nguy_co_truot_nong'].toString();
+        
+        // Convert nguy_co value to appropriate warning level (0-5)
+        if (nguyCo == "0") return 0;
         try {
-          await _mapController.removeLine(line);
+          double value = double.parse(nguyCo);
+          if (value >= 5) return 5;
+          if (value >= 4) return 4;
+          if (value >= 3) return 3;
+          if (value >= 2) return 2;
+          if (value >= 1) return 1;
+          return 0;
         } catch (e) {
-          print('Error removing district line: $e');
+          print('Error parsing nguy_co_truot_nong value: $e');
+          return 0;
         }
       }
     }
-    _drawnDistricts.clear();
-
-    if (_locationCircle != null) {
-      try {
-        await _mapController.removeCircle(_locationCircle!);
-        _locationCircle = null;
-      } catch (e) {
-        print('Error removing location circle: $e');
-      }
-    }
+    
+    // If no match is found, return warning level 0
+    return 0;
   }
 
-  Future<void> addCustomSymbol(
-    String id,
+  /// Gets the asset path for the warning icon based on the warning level
+  static String getWarningIconPath(int warningLevel) {
+    return 'lib/assets/map/landslide_$warningLevel.png';
+  }
+
+  /// Updates symbol options with the appropriate warning icon
+  static SymbolOptions getSymbolOptionsForWarningLevel(
+    int warningLevel,
     LatLng location,
-    String label,
-    {
-      String iconImage = 'landslide_0',
-      double iconSize = 0.15,
-      String? customColor,
-      int zIndex = 99,
-      Map<String, dynamic>? data,
-    }
-  ) async {
-    try {
-      final symbol = await _mapController.addSymbol(
-        SymbolOptions(
-          geometry: location,
-          iconImage: iconImage,
-          iconSize: iconSize,
-          iconColor: customColor ?? '#FF0000',
-          zIndex: zIndex,
-          textField: label,
-          textSize: 12,
-          textOffset: const Offset(0, 0.5),
-          textAnchor: 'top',
-          textColor: '#000000',
-          textHaloColor: '#FFFFFF',
-          textHaloWidth: 1,
-        ),
-        data,
-      );
-      _hourlyForecastSymbols[id] = symbol;
-    } catch (e) {
-      print('Error adding custom symbol: $e');
-    }
+    {double iconSize = 0.15}
+  ) {
+    return SymbolOptions(
+      geometry: location,
+      iconImage: 'landslide_$warningLevel',
+      iconSize: iconSize,
+      zIndex: 99,
+    );
   }
 
-  Future<void> updateSymbolPosition(String id, LatLng newLocation) async {
-    try {
-      final symbol = _hourlyForecastSymbols[id];
-      if (symbol != null) {
-        await _mapController.updateSymbol(
-          symbol,
-          SymbolOptions(geometry: newLocation),
-        );
-      }
-    } catch (e) {
-      print('Error updating symbol position: $e');
+  /// Preloads all warning icons into the map controller
+  static Future<void> preloadWarningIcons(MapboxMapController controller) async {
+    for (int i = 0; i <= 5; i++) {
+      final ByteData data = await rootBundle.load('lib/assets/map/landslide_$i.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      await controller.addImage('landslide_$i', bytes);
     }
-  }
-
-  Future<void> removeSymbol(String id) async {
-    try {
-      final symbol = _hourlyForecastSymbols[id];
-      if (symbol != null) {
-        await _mapController.removeSymbol(symbol);
-        _hourlyForecastSymbols.remove(id);
-      }
-    } catch (e) {
-      print('Error removing symbol: $e');
-    }
-  }
-
-  Future<void> highlightSymbol(String id) async {
-    try {
-      final symbol = _hourlyForecastSymbols[id];
-      if (symbol != null) {
-        await _mapController.updateSymbol(
-          symbol,
-          const SymbolOptions(
-            iconSize: 0.2,
-            iconColor: '#FFFF00', // Yellow for highlighting
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error highlighting symbol: $e');
-    }
-  }
-
-  Future<void> unhighlightSymbol(String id) async {
-    try {
-      final symbol = _hourlyForecastSymbols[id];
-      if (symbol != null) {
-        await _mapController.updateSymbol(
-          symbol,
-          const SymbolOptions(
-            iconSize: 0.15,
-            iconColor: '#FF0000',
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error unhighlighting symbol: $e');
-    }
-  }
-
-  Future<void> ensureLandslidePointsOnTop() async {
-    for (var symbol in _drawnLandslidePoints) {
-      try {
-        await _mapController.updateSymbol(
-          symbol,
-          const SymbolOptions(zIndex: 98),
-        );
-      } catch (e) {
-        print('Error updating landslide point zIndex: $e');
-      }
-    }
-
-    for (var symbol in _hourlyForecastSymbols.values) {
-      try {
-        await _mapController.updateSymbol(
-          symbol,
-          const SymbolOptions(zIndex: 99),
-        );
-      } catch (e) {
-        print('Error updating hourly forecast point zIndex: $e');
-      }
-    }
-  }
-
-  Future<Uint8List> _loadImageFromAsset(String assetName) async {
-    final ByteData data = await rootBundle.load(assetName);
-    return data.buffer.asUint8List();
-  }
-
-  Future<void> loadMapIcons() async {
-    try {
-      final icons = [
-        'landslide_0',
-        'landslide_1',
-        'landslide_2',
-        'landslide_3',
-        'landslide_4',
-        'landslide_5',
-      ];
-
-      for (var icon in icons) {
-        final imageData = await _loadImageFromAsset('lib/assets/map/$icon.png');
-        await _mapController.addImage(icon, imageData);
-      }
-    } catch (e) {
-      print('Error loading map icons: $e');
-    }
-  }
-
-  void dispose() {
-    clearAllPoints();
-    resetMap();
   }
 }

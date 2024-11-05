@@ -28,4 +28,18 @@ class HourlyForecastResponse {
       totalPoints: json['total_points'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    Map<String, dynamic> jsonData = {};
+    data.forEach((key, value) {
+      jsonData[key] = value.map((point) => point.toJson()).toList();
+    });
+
+    return {
+      'success': success,
+      'data': jsonData,
+      'filters': filters,
+      'total_points': totalPoints,
+    };
+  }
 }

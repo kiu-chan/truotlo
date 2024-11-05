@@ -96,7 +96,7 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
               counts['3'] = (counts['3'] ?? 0) + 1;
             } else if (nguyCoTruotNong >= 2) {
               counts['2'] = (counts['2'] ?? 0) + 1;
-            } else {
+            } else if (nguyCoTruotNong > 0) {
               counts['1'] = (counts['1'] ?? 0) + 1;
             }
           }
@@ -259,7 +259,7 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
                 else if (!_hasData)
                   const Center(
                     child: Text(
-                      'Không có dữ liệu',
+                      'Không có nguy cơ trượt nông',
                       style: TextStyle(
                         fontSize: 14,
                         fontStyle: FontStyle.italic,
