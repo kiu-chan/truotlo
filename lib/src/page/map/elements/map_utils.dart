@@ -219,112 +219,134 @@ class MapUtils {
     }
   }
 
-Future<void> drawLandslidePointsOnMap(
-  List<LandslidePoint> points, {
-  bool showOnlyLandslideRisk = false,
-  bool showOnlyFlashFloodRisk = false,
-  bool showOnlyLargeSlideRisk = false,
-}) async {
-  await clearLandslidePointsOnMap();
+  Future<void> drawLandslidePointsOnMap(
+    List<LandslidePoint> points, {
+    bool showOnlyLandslideRisk = false,
+    bool showOnlyFlashFloodRisk = false,
+    bool showOnlyLargeSlideRisk = false,
+  }) async {
+    await clearLandslidePointsOnMap();
 
-  // Tải trước tất cả các icon cảnh báo
-  for (int i = 0; i <= 5; i++) {
-    final ByteData bytes = await rootBundle.load('lib/assets/map/landslide_$i.png');
-    final Uint8List list = bytes.buffer.asUint8List();
-    await _mapController.addImage("landslide_$i", list);
-  }
-
-  try {
-    final forecastResponse = await http.get(
-      Uri.parse('http://truotlobinhdinh.girc.edu.vn/api/forecast-points')
-    );
-
-    Map<String, dynamic>? forecastData;
-    List<dynamic>? currentForecasts;
-    Map<String, Map<String, dynamic>> forecastMap = {};
-
-    if (forecastResponse.statusCode == 200) {
-      forecastData = json.decode(forecastResponse.body);
-      String latestTimestamp = forecastData!['data'].keys.first;
-      currentForecasts = forecastData['data'][latestTimestamp];
-      
-      for (var forecast in currentForecasts!) {
-        String tenDiem = forecast['ten_diem'].toString().replaceAll('"', '');
-        forecastMap[tenDiem] = forecast;
-      }
+    // Tải trước tất cả các icon cảnh báo
+    for (int i = 0; i <= 5; i++) {
+      final ByteData bytes = await rootBundle.load('lib/assets/map/landslide_$i.png');
+      final Uint8List list = bytes.buffer.asUint8List();
+      await _mapController.addImage("landslide_$i", list);
     }
 
-    for (var point in points) {
-      String iconImage = 'landslide_0';
-      String objectId = point.objectId.toString();
-      Map<String, dynamic>? matchingForecast = forecastMap[objectId];
-
-      if (matchingForecast != null) {
-        double landslideValue = 0;
-        double flashFloodValue = 0;
-        double largeSlideValue = 0;
-
-        try {
-          landslideValue = double.parse(matchingForecast['nguy_co_truot_nong'].toString());
-          flashFloodValue = double.parse(matchingForecast['nguy_co_lu_quet'].toString());
-          largeSlideValue = double.parse(matchingForecast['nguy_co_truot_lon'].toString());
-        } catch (e) {
-          print('Lỗi khi parse giá trị nguy cơ: $e');
-        }
-
-        // Kiểm tra các điều kiện lọc
-        if (showOnlyLandslideRisk && landslideValue <= 0) continue;
-        if (showOnlyFlashFloodRisk && flashFloodValue <= 0) continue;
-        if (showOnlyLargeSlideRisk && largeSlideValue <= 0) continue;
-
-        // Chọn giá trị cao nhất để hiển thị icon
-        double maxValue = 0;
-        if (showOnlyLandslideRisk) {
-          maxValue = landslideValue;
-        } else if (showOnlyFlashFloodRisk) {
-          maxValue = flashFloodValue;
-        } else if (showOnlyLargeSlideRisk) {
-          maxValue = largeSlideValue;
-        } else {
-          maxValue = [landslideValue, flashFloodValue, largeSlideValue].reduce(max);
-        }
-
-        // Xác định icon dựa trên giá trị cao nhất
-        if (maxValue >= 5) {
-          iconImage = 'landslide_5';
-        } else if (maxValue >= 4) {
-          iconImage = 'landslide_4';
-        } else if (maxValue >= 3) {
-          iconImage = 'landslide_3';
-        } else if (maxValue >= 2) {
-          iconImage = 'landslide_2';
-        } else if (maxValue >= 1) {
-          iconImage = 'landslide_1';
-        }
-      } else if (showOnlyLandslideRisk || showOnlyFlashFloodRisk || showOnlyLargeSlideRisk) {
-        continue;
-      }
-
-      Symbol symbol = await _mapController.addSymbol(
-        SymbolOptions(
-          geometry: point.location,
-          iconImage: iconImage,
-          iconSize: 0.15,
-          zIndex: 99,
-        ),
-        {
-          'id': point.id,
-          'district': point.district,
-          'object_id': point.objectId,
-          'forecast_data': matchingForecast,
-        },
+    try {
+      final forecastResponse = await http.get(
+        Uri.parse('http://truotlobinhdinh.girc.edu.vn/api/forecast-points')
       );
-      _drawnLandslidePoints.add(symbol);
+
+      Map<String, Map<String, dynamic>> forecastMap = {};
+
+      if (forecastResponse.statusCode == 200) {
+        final responseData = json.decode(forecastResponse.body);
+        
+        // Kiểm tra và xử lý dữ liệu forecast
+        if (responseData is Map && responseData.containsKey('data')) {
+          final Map<String, dynamic> dataMap = responseData['data'];
+          // Lấy timestamp mới nhất
+          final String latestTimestamp = dataMap.keys.first;
+          final List<dynamic> forecasts = dataMap[latestTimestamp];
+          
+          for (var forecast in forecasts) {
+            if (forecast is Map<String, dynamic>) {
+              String tenDiem = forecast['ten_diem']?.toString().replaceAll('"', '') ?? '';
+              if (tenDiem.isNotEmpty) {
+                forecastMap[tenDiem] = forecast;
+              }
+            }
+          }
+        }
+      }
+
+      // Tạo tất cả các điểm cùng một lúc để tối ưu hiệu suất
+      List<Future<Symbol>> symbolFutures = [];
+
+      for (var point in points) {
+        String iconImage = 'landslide_0';
+        String objectId = point.objectId.toString();
+        Map<String, dynamic>? matchingForecast = forecastMap[objectId];
+
+        if (matchingForecast != null) {
+          double landslideValue = 0;
+          double flashFloodValue = 0;
+          double largeSlideValue = 0;
+
+          try {
+            landslideValue = double.tryParse(matchingForecast['nguy_co_truot_nong']?.toString() ?? '0') ?? 0;
+            flashFloodValue = double.tryParse(matchingForecast['nguy_co_lu_quet']?.toString() ?? '0') ?? 0;
+            largeSlideValue = double.tryParse(matchingForecast['nguy_co_truot_lon']?.toString() ?? '0') ?? 0;
+          } catch (e) {
+            print('Lỗi khi parse giá trị nguy cơ: $e');
+          }
+
+          // Kiểm tra các điều kiện lọc
+          if (showOnlyLandslideRisk && landslideValue <= 0) continue;
+          if (showOnlyFlashFloodRisk && flashFloodValue <= 0) continue;
+          if (showOnlyLargeSlideRisk && largeSlideValue <= 0) continue;
+
+          // Chọn giá trị cao nhất để hiển thị icon
+          double maxValue = 0;
+          if (showOnlyLandslideRisk) {
+            maxValue = landslideValue;
+          } else if (showOnlyFlashFloodRisk) {
+            maxValue = flashFloodValue;
+          } else if (showOnlyLargeSlideRisk) {
+            maxValue = largeSlideValue;
+          } else {
+            maxValue = [landslideValue, flashFloodValue, largeSlideValue].reduce(max);
+          }
+
+          // Xác định icon dựa trên giá trị cao nhất
+          if (maxValue >= 5) {
+            iconImage = 'landslide_5';
+          } else if (maxValue >= 4) {
+            iconImage = 'landslide_4';
+          } else if (maxValue >= 3) {
+            iconImage = 'landslide_3';
+          } else if (maxValue >= 2) {
+            iconImage = 'landslide_2';
+          } else if (maxValue >= 1) {
+            iconImage = 'landslide_1';
+          }
+        } else if (showOnlyLandslideRisk || showOnlyFlashFloodRisk || showOnlyLargeSlideRisk) {
+          continue;
+        }
+
+        // Tạo symbol và thêm vào danh sách futures
+        symbolFutures.add(_mapController.addSymbol(
+          SymbolOptions(
+            geometry: point.location,
+            iconImage: iconImage,
+            iconSize: 0.15,
+            textField: '', // Thêm trường này để đảm bảo symbol luôn hiển thị
+            textOffset: const Offset(0, 0),
+            zIndex: 99,
+          ),
+          {
+            'id': point.id,
+            'district': point.district,
+            'object_id': point.objectId,
+            'forecast_data': matchingForecast,
+          },
+        ));
+      }
+
+      // Chờ tất cả các symbol được tạo xong
+      final symbols = await Future.wait(symbolFutures);
+      _drawnLandslidePoints.addAll(symbols);
+
+      // Cập nhật layer để đảm bảo các điểm hiển thị trên cùng
+      await _mapController.setSymbolIconIgnorePlacement(true);
+
+    } catch (e) {
+      print('Lỗi khi vẽ điểm trượt lở: $e');
+      print('Chi tiết lỗi: ${e.toString()}');
     }
-  } catch (e) {
-    print('Lỗi khi vẽ điểm trượt lở: $e');
   }
-}
 
 // Thêm phương thức này vào lớp MapUtils
 Future<Uint8List> _loadImageFromAsset(String assetName) async {

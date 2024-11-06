@@ -41,52 +41,57 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
     return DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
   }
 
-  Future<void> _loadData() async {
-    if (!mounted) return;
+Future<void> _loadData() async {
+  if (!mounted) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+  setState(() {
+    _isLoading = true;
+  });
 
-    try {
-      final response = await http.get(
-        Uri.parse('http://truotlobinhdinh.girc.edu.vn/api/forecast-points')
-      );
+  try {
+    final response = await http.get(
+      Uri.parse('http://truotlobinhdinh.girc.edu.vn/api/forecast-points')
+    );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonResponse = json.decode(response.body);
+      
+      if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
+        final Map<String, dynamic> data = jsonResponse['data'];
+        if (data.isEmpty) {
+          setState(() {
+            _hasData = false;
+            _isLoading = false;
+          });
+          return;
+        }
+
+        final String currentHourKey = data.keys.first;
+        final List<dynamic> hourlyPoints = data[currentHourKey] ?? [];
         
-        if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
-          final Map<String, dynamic> data = jsonResponse['data'];
-          if (data.isEmpty) {
-            setState(() {
-              _hasData = false;
-              _isLoading = false;
-            });
-            return;
-          }
+        if (hourlyPoints.isEmpty) {
+          setState(() {
+            _hasData = false;
+            _isLoading = false;
+          });
+          return;
+        }
+        
+        Map<String, int> counts = {
+          '5': 0,
+          '4': 0,
+          '3': 0,
+          '2': 0,
+          '1': 0,
+        };
 
-          final String currentHourKey = data.keys.first;
-          final List<dynamic> hourlyPoints = data[currentHourKey] ?? [];
-          
-          if (hourlyPoints.isEmpty) {
-            setState(() {
-              _hasData = false;
-              _isLoading = false;
-            });
-            return;
-          }
-          
-          Map<String, int> counts = {
-            '5': 0,
-            '4': 0,
-            '3': 0,
-            '2': 0,
-            '1': 0,
-          };
+        bool hasNonZeroRisk = false;  // Thêm biến để kiểm tra có điểm nào có nguy cơ > 0
 
-          for (var point in hourlyPoints) {
-            final nguyCoTruotNong = double.tryParse(point['nguy_co_truot_nong']?.toString() ?? '0') ?? 0;
+        for (var point in hourlyPoints) {
+          final nguyCoTruotNong = double.tryParse(point['nguy_co_truot_nong']?.toString() ?? '0') ?? 0;
+          
+          if (nguyCoTruotNong > 0) {
+            hasNonZeroRisk = true;  // Đánh dấu có ít nhất 1 điểm có nguy cơ > 0
             
             if (nguyCoTruotNong >= 5) {
               counts['5'] = (counts['5'] ?? 0) + 1;
@@ -96,21 +101,17 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
               counts['3'] = (counts['3'] ?? 0) + 1;
             } else if (nguyCoTruotNong >= 2) {
               counts['2'] = (counts['2'] ?? 0) + 1;
-            } else if (nguyCoTruotNong > 0) {
+            } else {
               counts['1'] = (counts['1'] ?? 0) + 1;
             }
           }
+        }
 
-          if (mounted) {
-            setState(() {
-              _riskLevelCounts = counts;
-              _hasData = true;
-              _isLoading = false;
-            });
-          }
-        } else {
+        if (mounted) {
           setState(() {
-            _hasData = false;
+            _riskLevelCounts = counts;
+            // Chỉ set _hasData = true nếu có ít nhất 1 điểm có nguy cơ > 0
+            _hasData = hasNonZeroRisk;
             _isLoading = false;
           });
         }
@@ -120,16 +121,22 @@ class DisasterWarningCardState extends State<DisasterWarningCard> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      print('Error loading forecast data: $e');
-      if (mounted) {
-        setState(() {
-          _hasData = false;
-          _isLoading = false;
-        });
-      }
+    } else {
+      setState(() {
+        _hasData = false;
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    print('Error loading forecast data: $e');
+    if (mounted) {
+      setState(() {
+        _hasData = false;
+        _isLoading = false;
+      });
     }
   }
+}
 
   Widget _buildRiskLevelRow(String level, int count) {
     String riskText;
