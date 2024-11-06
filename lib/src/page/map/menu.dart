@@ -21,6 +21,10 @@ class MapMenu extends StatelessWidget {
   final Function(String, bool?) onDistrictLandslideVisibilityChanged;
   final bool showOnlyLandslideRisk;
   final Function(bool?) onShowOnlyLandslideRiskChanged;
+  final bool showOnlyFlashFloodRisk;  // Thêm mới
+  final bool showOnlyLargeSlideRisk;
+  final Function(bool?) onShowOnlyFlashFloodRiskChanged;  // Thêm mới
+  final Function(bool?) onShowOnlyLargeSlideRiskChanged;
 
   const MapMenu({
     super.key,
@@ -42,6 +46,10 @@ class MapMenu extends StatelessWidget {
     required this.onDistrictLandslideVisibilityChanged,
     required this.showOnlyLandslideRisk,  // Thêm vào đây
     required this.onShowOnlyLandslideRiskChanged,
+    required this.showOnlyFlashFloodRisk,  // Thêm mới
+    required this.showOnlyLargeSlideRisk,
+    required this.onShowOnlyFlashFloodRiskChanged,  // Thêm mới
+    required this.onShowOnlyLargeSlideRiskChanged, 
   });
 
   @override
@@ -130,6 +138,18 @@ class MapMenu extends StatelessWidget {
                 subtitle: const Text('Ẩn các điểm không có nguy cơ'),
                 value: showOnlyLandslideRisk,
                 onChanged: onShowOnlyLandslideRiskChanged,
+              ),
+              CheckboxListTile(
+                title: const Text('Chỉ hiện điểm lũ quét'),
+                subtitle: const Text('Ẩn các điểm không có nguy cơ'),
+                value: showOnlyFlashFloodRisk,
+                onChanged: onShowOnlyFlashFloodRiskChanged,
+              ),
+              CheckboxListTile(
+                title: const Text('Chỉ hiện điểm trượt lớn'),
+                subtitle: const Text('Ẩn các điểm không có nguy cơ'),
+                value: showOnlyLargeSlideRisk,
+                onChanged: onShowOnlyLargeSlideRiskChanged,
               ),
         ],
       ),

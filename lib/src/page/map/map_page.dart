@@ -144,7 +144,11 @@ class MapboxPageState extends State<MapboxPage> with MapState {
         onDistrictVisibilityChanged: toggleDistrictVisibility,
         onDistrictLandslideVisibilityChanged: toggleDistrictLandslideVisibility,
         showOnlyLandslideRisk: showOnlyLandslideRisk,
+        showOnlyFlashFloodRisk: showOnlyFlashFloodRisk,
+        showOnlyLargeSlideRisk: showOnlyLargeSlideRisk,
         onShowOnlyLandslideRiskChanged: toggleShowOnlyLandslideRisk,
+        onShowOnlyFlashFloodRiskChanged: toggleShowOnlyFlashFloodRisk,
+        onShowOnlyLargeSlideRiskChanged: toggleShowOnlyLargeSlideRisk,
       ),
       body: Stack(
         children: [

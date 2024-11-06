@@ -5,6 +5,7 @@ import 'package:truotlo/src/data/map/landslide_point.dart';
 import 'package:truotlo/src/database/commune.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:math' show max;
 
 class MapUtils {
   final MapboxMapController _mapController;
@@ -219,9 +220,11 @@ class MapUtils {
   }
 
 Future<void> drawLandslidePointsOnMap(
-  List<LandslidePoint> points,
-  {bool showOnlyLandslideRisk = false}
-) async {
+  List<LandslidePoint> points, {
+  bool showOnlyLandslideRisk = false,
+  bool showOnlyFlashFloodRisk = false,
+  bool showOnlyLargeSlideRisk = false,
+}) async {
   await clearLandslidePointsOnMap();
 
   // Tải trước tất cả các icon cảnh báo
@@ -232,72 +235,82 @@ Future<void> drawLandslidePointsOnMap(
   }
 
   try {
-    Map<String, Map<String, dynamic>> forecastMap = {};
-    
-    // Lấy dữ liệu dự báo
     final forecastResponse = await http.get(
       Uri.parse('http://truotlobinhdinh.girc.edu.vn/api/forecast-points')
     );
 
+    Map<String, dynamic>? forecastData;
+    List<dynamic>? currentForecasts;
+    Map<String, Map<String, dynamic>> forecastMap = {};
+
     if (forecastResponse.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(forecastResponse.body);
-      if (responseData.containsKey('data') && responseData['data'] is Map) {
-        final Map<String, dynamic> data = responseData['data'];
-        if (data.isNotEmpty) {
-          // Lấy timestamp mới nhất
-          final String latestTimestamp = data.keys.first;
-          final List<dynamic> currentForecasts = data[latestTimestamp];
-          
-          // Tạo map ánh xạ từ ten_diem sang forecast data
-          for (var forecast in currentForecasts) {
-            String tenDiem = forecast['ten_diem'].toString().replaceAll('"', '');
-            forecastMap[tenDiem] = forecast;
-          }
-        }
+      forecastData = json.decode(forecastResponse.body);
+      String latestTimestamp = forecastData!['data'].keys.first;
+      currentForecasts = forecastData['data'][latestTimestamp];
+      
+      for (var forecast in currentForecasts!) {
+        String tenDiem = forecast['ten_diem'].toString().replaceAll('"', '');
+        forecastMap[tenDiem] = forecast;
       }
     }
 
-    // Vẽ các điểm
     for (var point in points) {
       String iconImage = 'landslide_0';
       String objectId = point.objectId.toString();
       Map<String, dynamic>? matchingForecast = forecastMap[objectId];
-      int zIndex = 1; // Mặc định zIndex = 1 cho các điểm không có nguy cơ
 
       if (matchingForecast != null) {
-        String nguyCo = matchingForecast['nguy_co_truot_nong'].toString();
+        double landslideValue = 0;
+        double flashFloodValue = 0;
+        double largeSlideValue = 0;
+
         try {
-          double value = double.parse(nguyCo);
-          
-          // Set zIndex = 1000 cho các điểm có nguy cơ
-          if (value > 0) {
-            zIndex = 1000;
-          }
-          
-          // Xác định icon dựa trên mức độ nguy cơ
-          if (value >= 5) {
-            iconImage = 'landslide_5';
-          } else if (value >= 4) {
-            iconImage = 'landslide_4';
-          } else if (value >= 3) {
-            iconImage = 'landslide_3';
-          } else if (value >= 2) {
-            iconImage = 'landslide_2';
-          } else if (value >= 1) {
-            iconImage = 'landslide_1';
-          }
+          landslideValue = double.parse(matchingForecast['nguy_co_truot_nong'].toString());
+          flashFloodValue = double.parse(matchingForecast['nguy_co_lu_quet'].toString());
+          largeSlideValue = double.parse(matchingForecast['nguy_co_truot_lon'].toString());
         } catch (e) {
-          print('Lỗi khi parse nguy_co_truot_nong: $e');
+          print('Lỗi khi parse giá trị nguy cơ: $e');
         }
+
+        // Kiểm tra các điều kiện lọc
+        if (showOnlyLandslideRisk && landslideValue <= 0) continue;
+        if (showOnlyFlashFloodRisk && flashFloodValue <= 0) continue;
+        if (showOnlyLargeSlideRisk && largeSlideValue <= 0) continue;
+
+        // Chọn giá trị cao nhất để hiển thị icon
+        double maxValue = 0;
+        if (showOnlyLandslideRisk) {
+          maxValue = landslideValue;
+        } else if (showOnlyFlashFloodRisk) {
+          maxValue = flashFloodValue;
+        } else if (showOnlyLargeSlideRisk) {
+          maxValue = largeSlideValue;
+        } else {
+          maxValue = [landslideValue, flashFloodValue, largeSlideValue].reduce(max);
+        }
+
+        // Xác định icon dựa trên giá trị cao nhất
+        if (maxValue >= 5) {
+          iconImage = 'landslide_5';
+        } else if (maxValue >= 4) {
+          iconImage = 'landslide_4';
+        } else if (maxValue >= 3) {
+          iconImage = 'landslide_3';
+        } else if (maxValue >= 2) {
+          iconImage = 'landslide_2';
+        } else if (maxValue >= 1) {
+          iconImage = 'landslide_1';
+        }
+      } else if (showOnlyLandslideRisk || showOnlyFlashFloodRisk || showOnlyLargeSlideRisk) {
+        continue;
       }
 
-      // Tạo symbol cho điểm
       Symbol symbol = await _mapController.addSymbol(
         SymbolOptions(
           geometry: point.location,
           iconImage: iconImage,
           iconSize: 0.15,
-          zIndex: zIndex,
+          zIndex: 99,
         ),
         {
           'id': point.id,

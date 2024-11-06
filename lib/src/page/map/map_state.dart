@@ -33,6 +33,8 @@ mixin MapState<T extends StatefulWidget> on State<T> {
   bool isCommunesVisible = false;
   bool isLandslidePointsVisible = true;
   bool showOnlyLandslideRisk = false;
+  bool showOnlyFlashFloodRisk = false;  // Thêm mới
+  bool showOnlyLargeSlideRisk = false;
   List<District> districts = [];
   Set<String> allDistricts = {};
   List<Symbol> _districtLabels = [];
@@ -407,6 +409,46 @@ void toggleShowOnlyLandslideRisk(bool? value) async {
     }
   }
 }
+
+  void toggleShowOnlyFlashFloodRisk(bool? value) async {
+    if (value != null) {
+      setState(() {
+        showOnlyFlashFloodRisk = value;
+        // Tắt các bộ lọc khác khi bật bộ lọc này
+        if (value) {
+          showOnlyLandslideRisk = false;
+          showOnlyLargeSlideRisk = false;
+        }
+      });
+      if (_isMapInitialized) {
+        await _mapUtils.clearLandslidePointsOnMap();
+        await _mapUtils.drawLandslidePointsOnMap(
+          landslidePoints,
+          showOnlyFlashFloodRisk: showOnlyFlashFloodRisk,
+        );
+      }
+    }
+  }
+
+  void toggleShowOnlyLargeSlideRisk(bool? value) async {
+    if (value != null) {
+      setState(() {
+        showOnlyLargeSlideRisk = value;
+        // Tắt các bộ lọc khác khi bật bộ lọc này
+        if (value) {
+          showOnlyLandslideRisk = false;
+          showOnlyFlashFloodRisk = false;
+        }
+      });
+      if (_isMapInitialized) {
+        await _mapUtils.clearLandslidePointsOnMap();
+        await _mapUtils.drawLandslidePointsOnMap(
+          landslidePoints,
+          showOnlyLargeSlideRisk: showOnlyLargeSlideRisk,
+        );
+      }
+    }
+  }
 
 Widget buildInfoRow(String label, String value) {
   return Padding(
