@@ -80,39 +80,69 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
     }
   }
 
-  Future<void> _loadHourlyForecast() async {
+Future<void> _loadHourlyForecast() async {
+  try {
     final response = await http.get(Uri.parse(_hourlyApiUrl));
     
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = json.decode(response.body);
+      
       if (responseData['success'] == true && responseData['data'] != null) {
-        // Lấy thời gian hiện tại
-        final now = DateTime.now();
-        final currentHourKey = DateFormat('yyyy-MM-dd HH').format(now);
+        // Lấy data object từ response
+        final Map<String, dynamic> data = responseData['data'];
         
-        // Kiểm tra xem có dữ liệu cho giờ hiện tại không
-        if (responseData['data'].containsKey(currentHourKey)) {
-          final List<dynamic> hourlyData = responseData['data'][currentHourKey];
+        // Debug: In ra tất cả các timestamps có sẵn
+        print('Available timestamps: ${data.keys.toList()}');
+        
+        if (data.isNotEmpty) {
+          // Lấy timestamp mới nhất (key đầu tiên)
+          String latestTimestamp = data.keys.first;
+          print('Latest timestamp: $latestTimestamp');
           
+          // Lấy danh sách dự báo từ timestamp mới nhất
+          final List<dynamic> hourlyData = data[latestTimestamp];
+          print('Number of forecast points: ${hourlyData.length}');
+          
+          // Chuyển đổi dữ liệu thành danh sách HourlyForecastPoint
           setState(() {
             _hourlyForecasts = hourlyData
                 .map((point) => HourlyForecastPoint.fromJson(point))
                 .toList();
-            _currentHourKey = currentHourKey;
-            _lastUpdateTime = currentHourKey;
+            _currentHourKey = latestTimestamp;
+            _lastUpdateTime = latestTimestamp;
           });
+          
+          // Debug: In ra số lượng điểm sau khi chuyển đổi
+          print('Converted points: ${_hourlyForecasts.length}');
+          
+          // Debug: In ra một vài điểm mẫu
+          if (_hourlyForecasts.isNotEmpty) {
+            print('Sample point data:');
+            print('Location: ${_hourlyForecasts[0].viTri}');
+            print('District: ${_hourlyForecasts[0].huyen}');
+            print('Risks: ${_hourlyForecasts[0].nguyCoLuQuet}, ${_hourlyForecasts[0].nguyCoTruotNong}, ${_hourlyForecasts[0].nguyCoTruotLon}');
+          }
         } else {
+          print('No data available in response');
           setState(() {
             _hourlyForecasts = [];
-            _currentHourKey = currentHourKey;
-            _lastUpdateTime = currentHourKey;
+            _currentHourKey = DateFormat('yyyy-MM-dd HH').format(DateTime.now());
+            _lastUpdateTime = _currentHourKey;
           });
         }
+      } else {
+        print('Invalid response format: success=${responseData['success']}');
       }
     } else {
-      throw Exception('Không thể tải dữ liệu dự báo theo giờ');
+      print('HTTP Error: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      throw Exception('Failed to load hourly forecast data');
     }
+  } catch (e) {
+    print('Error loading hourly forecast: $e');
+    rethrow;
   }
+}
 
   Future<void> _loadDailyForecast() async {
     final response = await http.get(Uri.parse(_dailyApiUrl));
@@ -184,53 +214,53 @@ class LandslideForecastCardState extends State<LandslideForecastCard> {
     return forecastDates;
   }
 
-  Widget _buildHourlyForecastTable() {
-    if (_hourlyForecasts.isEmpty) {
-      return const Center(child: Text('Không có dữ liệu dự báo cho giờ hiện tại'));
-    }
-
-    Map<String, List<HourlyForecastPoint>> groupedByDistrict = {};
-    for (var point in _hourlyForecasts) {
-      if (!groupedByDistrict.containsKey(point.huyen)) {
-        groupedByDistrict[point.huyen] = [];
-      }
-      groupedByDistrict[point.huyen]!.add(point);
-    }
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Container(
-        constraints: BoxConstraints(
-          minWidth: MediaQuery.of(context).size.width - 32,
-        ),
-        child: Table(
-          border: TableBorder.all(
-            color: Colors.grey[300]!,
-            width: 1,
-          ),
-          defaultColumnWidth: const IntrinsicColumnWidth(),
-          children: [
-            buildTableRow(
-              ['Huyện', 'Xã', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'],
-              isHeader: true,
-            ),
-            ...groupedByDistrict.entries.expand((district) {
-              return district.value.map((point) {
-                return buildTableRow([
-                  point.huyen,
-                  point.xa,
-                  point.viTri,
-                  buildRiskIcon(_getRiskLevel(point.nguyCoLuQuet)),
-                  buildRiskIcon(_getRiskLevel(point.nguyCoTruotNong)),
-                  buildRiskIcon(_getRiskLevel(point.nguyCoTruotLon)),
-                ]);
-              }).toList();
-            }).toList(),
-          ],
-        ),
-      ),
-    );
+Widget _buildHourlyForecastTable() {
+  if (_hourlyForecasts.isEmpty) {
+    return const Center(child: Text('Không có dữ liệu dự báo cho giờ hiện tại'));
   }
+
+  Map<String, List<HourlyForecastPoint>> groupedByDistrict = {};
+  for (var point in _hourlyForecasts) {
+    if (!groupedByDistrict.containsKey(point.huyen)) {
+      groupedByDistrict[point.huyen] = [];
+    }
+    groupedByDistrict[point.huyen]!.add(point);
+  }
+
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Container(
+      constraints: BoxConstraints(
+        minWidth: MediaQuery.of(context).size.width - 32,
+      ),
+      child: Table(
+        border: TableBorder.all(
+          color: Colors.grey[300]!,
+          width: 1,
+        ),
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        children: [
+          buildTableRow(
+            ['Huyện', 'Xã', 'Vị trí', 'Lũ quét', 'Trượt nông', 'Trượt lớn'],
+            isHeader: true,
+          ),
+          ...groupedByDistrict.entries.expand((district) {
+            return district.value.map((point) {
+              return buildTableRow([
+                point.huyen,
+                point.xa,
+                point.viTri,
+                buildRiskIcon(_getRiskLevel(point.nguyCoLuQuet)),
+                buildRiskIcon(_getRiskLevel(point.nguyCoTruotNong)),
+                buildRiskIcon(_getRiskLevel(point.nguyCoTruotLon)),
+              ]);
+            }).toList();
+          }).toList(),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildDailyForecastTable() {
     if (_dailyForecastPoints.isEmpty) {
