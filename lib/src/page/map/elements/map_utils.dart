@@ -243,19 +243,28 @@ class MapUtils {
 
       if (forecastResponse.statusCode == 200) {
         final responseData = json.decode(forecastResponse.body);
+        // Debug: In ra cấu trúc dữ liệu
+        print('Response data structure: ${responseData.runtimeType}');
+        print('Response data: $responseData');
         
-        // Kiểm tra và xử lý dữ liệu forecast
-        if (responseData is Map && responseData.containsKey('data')) {
-          final Map<String, dynamic> dataMap = responseData['data'];
-          // Lấy timestamp mới nhất
-          final String latestTimestamp = dataMap.keys.first;
-          final List<dynamic> forecasts = dataMap[latestTimestamp];
+        if (responseData is Map<String, dynamic> && 
+            responseData.containsKey('data') && 
+            responseData['data'] is Map<String, dynamic>) {
           
-          for (var forecast in forecasts) {
-            if (forecast is Map<String, dynamic>) {
-              String tenDiem = forecast['ten_diem']?.toString().replaceAll('"', '') ?? '';
-              if (tenDiem.isNotEmpty) {
-                forecastMap[tenDiem] = forecast;
+          final Map<String, dynamic> dataMap = responseData['data'];
+          // Lấy timestamp mới nhất (key đầu tiên trong map)
+          if (dataMap.isNotEmpty) {
+            String latestTimestamp = dataMap.keys.first;
+            final forecastPoints = dataMap[latestTimestamp];
+            
+            if (forecastPoints is List) {
+              for (var forecast in forecastPoints) {
+                if (forecast is Map<String, dynamic>) {
+                  String tenDiem = forecast['ten_diem']?.toString().replaceAll('"', '') ?? '';
+                  if (tenDiem.isNotEmpty) {
+                    forecastMap[tenDiem] = forecast;
+                  }
+                }
               }
             }
           }
@@ -266,30 +275,44 @@ class MapUtils {
       List<Future<Symbol>> symbolFutures = [];
 
       for (var point in points) {
-        String iconImage = 'landslide_0';
         String objectId = point.objectId.toString();
         Map<String, dynamic>? matchingForecast = forecastMap[objectId];
 
-        if (matchingForecast != null) {
-          double landslideValue = 0;
-          double flashFloodValue = 0;
-          double largeSlideValue = 0;
+        // Nếu không có dự báo và đang bật một trong các bộ lọc, bỏ qua điểm này
+        if (matchingForecast == null && (showOnlyLandslideRisk || showOnlyFlashFloodRisk || showOnlyLargeSlideRisk)) {
+          continue;
+        }
 
+        double landslideValue = 0;
+        double flashFloodValue = 0;
+        double largeSlideValue = 0;
+
+        if (matchingForecast != null) {
           try {
             landslideValue = double.tryParse(matchingForecast['nguy_co_truot_nong']?.toString() ?? '0') ?? 0;
             flashFloodValue = double.tryParse(matchingForecast['nguy_co_lu_quet']?.toString() ?? '0') ?? 0;
             largeSlideValue = double.tryParse(matchingForecast['nguy_co_truot_lon']?.toString() ?? '0') ?? 0;
           } catch (e) {
-            print('Lỗi khi parse giá trị nguy cơ: $e');
+            print('Lỗi khi parse giá trị nguy cơ cho điểm $objectId: $e');
           }
+        }
 
-          // Kiểm tra các điều kiện lọc
-          if (showOnlyLandslideRisk && landslideValue <= 0) continue;
-          if (showOnlyFlashFloodRisk && flashFloodValue <= 0) continue;
-          if (showOnlyLargeSlideRisk && largeSlideValue <= 0) continue;
+        // Kiểm tra các điều kiện lọc
+        bool shouldDisplay = true;
+        if (showOnlyLandslideRisk && landslideValue <= 0) shouldDisplay = false;
+        if (showOnlyFlashFloodRisk && flashFloodValue <= 0) shouldDisplay = false;
+        if (showOnlyLargeSlideRisk && largeSlideValue <= 0) shouldDisplay = false;
 
-          // Chọn giá trị cao nhất để hiển thị icon
-          double maxValue = 0;
+        if (!shouldDisplay) {
+          print('Bỏ qua điểm $objectId do không thỏa mãn điều kiện lọc');
+          continue;
+        }
+
+        // Xác định icon dựa trên giá trị cao nhất
+        String iconImage = 'landslide_0';
+        double maxValue = 0;
+
+        if (matchingForecast != null) {
           if (showOnlyLandslideRisk) {
             maxValue = landslideValue;
           } else if (showOnlyFlashFloodRisk) {
@@ -300,7 +323,6 @@ class MapUtils {
             maxValue = [landslideValue, flashFloodValue, largeSlideValue].reduce(max);
           }
 
-          // Xác định icon dựa trên giá trị cao nhất
           if (maxValue >= 5) {
             iconImage = 'landslide_5';
           } else if (maxValue >= 4) {
@@ -312,9 +334,9 @@ class MapUtils {
           } else if (maxValue >= 1) {
             iconImage = 'landslide_1';
           }
-        } else if (showOnlyLandslideRisk || showOnlyFlashFloodRisk || showOnlyLargeSlideRisk) {
-          continue;
         }
+
+        print('Adding point $objectId with maxValue: $maxValue, icon: $iconImage');
 
         // Tạo symbol và thêm vào danh sách futures
         symbolFutures.add(_mapController.addSymbol(
@@ -324,7 +346,6 @@ class MapUtils {
             iconSize: 0.15,
             textField: '', // Thêm trường này để đảm bảo symbol luôn hiển thị
             textOffset: const Offset(0, 0),
-            zIndex: 99,
           ),
           {
             'id': point.id,
@@ -342,9 +363,12 @@ class MapUtils {
       // Cập nhật layer để đảm bảo các điểm hiển thị trên cùng
       await _mapController.setSymbolIconIgnorePlacement(true);
 
+      print('Đã vẽ ${symbols.length} điểm trên bản đồ');
+
     } catch (e) {
       print('Lỗi khi vẽ điểm trượt lở: $e');
       print('Chi tiết lỗi: ${e.toString()}');
+      print('Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -359,7 +383,7 @@ Future<Uint8List> _loadImageFromAsset(String assetName) async {
       try {
         await _mapController.updateSymbol(
           symbol,
-          const SymbolOptions(zIndex: 99),
+          const SymbolOptions(),
         );
       } catch (e) {
         print('Error updating landslide point zIndex: $e');
@@ -507,7 +531,6 @@ class LandslideWarningUtils {
       geometry: location,
       iconImage: 'landslide_$warningLevel',
       iconSize: iconSize,
-      zIndex: 99,
     );
   }
 
